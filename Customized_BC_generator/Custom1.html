@@ -1,0 +1,393 @@
+<!--
+1. Customizing Birthday Card Generator :
+Create a web page to help me write birthday cards where I can give a person's name, age and hobby and it gives me back a funny message. 
+Add a festive title and colors. Display the card on the right side, and make it look like the inside of a birthday card
+. Add a fun title at the top of the page. And instead of replacing the old cards, keep them visible and stack them underneath the new ones.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Birthday Card Buddy</title>
+  <style>
+    :root{
+      --bg1: #ffedf7;
+      --bg2: #fff8e6;
+      --accent: #ff6b81;
+      --accent2: #ffd166;
+      --paper: #fffdf9;
+      --text: #2b2b2b;
+      --muted: #666;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: radial-gradient(1200px 400px at 10% 10%, rgba(255,235,245,0.7), transparent 10%),
+                  linear-gradient(180deg, var(--bg1), var(--bg2));
+      color:var(--text);
+    }
+
+    /* Festive header */
+    header{
+      padding:22px 28px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .page-title{
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+    .title-badge{
+      width:64px;
+      height:64px;
+      border-radius:12px;
+      background: conic-gradient(from 120deg, #ffd166, #ff6b81, #8bd3dd, #c6f6d5, #ffd166);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      color:#6b1636;
+      font-size:22px;
+    }
+    h1{
+      margin:0;
+      font-size:28px;
+      letter-spacing:0.4px;
+    }
+    p.subtitle{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    /* Main layout */
+    .wrap{
+      display:flex;
+      gap:20px;
+      padding:18px;
+      max-width:1100px;
+      margin:0 auto 48px;
+    }
+
+    /* Left: form */
+    .controls{
+      width:340px;
+      min-width:260px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.85));
+      border-radius:14px;
+      padding:18px;
+      box-shadow: 0 6px 22px rgba(100,30,80,0.07);
+      align-self:flex-start;
+    }
+    .controls h2{
+      margin:0 0 10px 0;
+      font-size:18px;
+    }
+    label{
+      display:block;
+      font-size:13px;
+      margin-top:12px;
+      color:var(--muted);
+    }
+    input[type="text"], input[type="number"]{
+      width:100%;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(0,0,0,0.08);
+      margin-top:6px;
+      font-size:15px;
+      box-sizing:border-box;
+      background:transparent;
+    }
+    .actions{
+      margin-top:14px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    button{
+      padding:10px 14px;
+      border-radius:10px;
+      border:0;
+      cursor:pointer;
+      font-weight:600;
+      font-size:14px;
+    }
+    .btn-primary{
+      background: linear-gradient(90deg,var(--accent), #ff8aa1);
+      color:white;
+      box-shadow: 0 6px 14px rgba(255,107,129,0.16);
+    }
+    .btn-clear{
+      background:transparent;
+      border:1px solid rgba(0,0,0,0.06);
+      color:var(--text);
+    }
+    .note{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    /* Right: cards column */
+    .cards-area{
+      flex:1;
+      min-height:420px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:18px;
+    }
+    .stack{
+      width:420px;
+      max-width:92%;
+      position:relative;
+      /* center */
+    }
+
+    /* Each card looks like the inside of a card */
+    .card{
+      background: linear-gradient(180deg, var(--paper), #fff9f4);
+      border-radius:12px;
+      padding:24px 28px;
+      box-shadow: 0 10px 30px rgba(22,6,46,0.08);
+      border:1px solid rgba(200,150,180,0.06);
+      position:relative;
+      transform-origin:center top;
+      margin-bottom:14px;
+      overflow:hidden;
+      min-height:150px;
+    }
+    .card::before{
+      /* subtle fold / crease */
+      content:"";
+      position:absolute;
+      left:0; right:0; top:0;
+      height:10px;
+      background:linear-gradient(180deg, rgba(0,0,0,0.03), transparent);
+      border-bottom-left-radius:12px;
+      border-bottom-right-radius:12px;
+    }
+
+    .greeting{
+      font-size:20px;
+      font-weight:700;
+      margin:6px 0 12px 0;
+      color:#4a063d;
+    }
+    .message{
+      font-size:15px;
+      line-height:1.4;
+      color:var(--text);
+    }
+    .signature{
+      margin-top:14px;
+      font-size:13px;
+      color:var(--muted);
+      text-align:right;
+    }
+    .confetti{
+      position:absolute;
+      inset:auto 18px 18px auto;
+      width:20px; height:20px;
+      font-size:20px;
+      opacity:0.9;
+    }
+
+    /* stacked look: older cards slightly shifted and darker shadow */
+    .card[data-order="0"]{ z-index:100; }
+    .card[data-order="1"]{ transform: translateY(12px) rotate(-1.8deg); z-index:90; }
+    .card[data-order="2"]{ transform: translateY(24px) rotate(1.8deg); z-index:80; }
+    .card[data-order="3"]{ transform: translateY(36px) rotate(-2.8deg); z-index:70; }
+    /* beyond 3 grow a bit */
+    .card[data-order="n"]{ transform: translateY(48px) rotate(0deg); z-index:60; }
+
+    /* small responsive tweaks */
+    @media (max-width:880px){
+      .wrap{ flex-direction:column; align-items:center; gap:16px; padding:8px;}
+      .controls{ width:100%; max-width:520px;}
+      .cards-area{ padding:8px;}
+      .stack{ width:100%;}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="page-title">
+      <div class="title-badge">BD</div>
+      <div>
+        <h1>Birthday Card Buddy!</h1>
+        <p class="subtitle">Make funny birthday-inside messages in seconds — keep every card you make!</p>
+      </div>
+    </div>
+
+    <div style="text-align:right;">
+      <p style="margin:0; font-size:13px; color:var(--muted)">Confetti guaranteed 🎉</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <aside class="controls" aria-labelledby="form-title">
+      <h2 id="form-title">Tell me about the birthday person</h2>
+
+      <label for="name">Name</label>
+      <input id="name" type="text" placeholder="Alex" />
+
+      <label for="age">Age</label>
+      <input id="age" type="number" min="0" placeholder="e.g. 29" />
+
+      <label for="hobby">Hobby (optional)</label>
+      <input id="hobby" type="text" placeholder="gardening, gaming, pottery..." />
+
+      <div class="actions">
+        <button id="makeBtn" class="btn-primary">Make funny card</button>
+        <button id="clearBtn" class="btn-clear" title="Remove all saved cards">Clear all</button>
+      </div>
+
+      <p class="note">Each card you create stays to the right. New cards appear on top; older ones stack underneath.</p>
+    </aside>
+
+    <section class="cards-area" aria-live="polite">
+      <div class="stack" id="stack">
+        <!-- generated cards will appear here, newest at top -->
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Helper: ordinal suffix (1st, 2nd, 3rd, 4th...)
+    function ordinal(n) {
+      const s = ["th","st","nd","rd"],
+            v = n % 100;
+      return n + (s[(v-20)%10] || s[v] || s[0]);
+    }
+
+    // Funny templates. Use {name}, {age}, {hobby}.
+    const templates = [
+      "Happy {age} birthday, {name}! At this point your {hobby} probably needs a seatbelt — it's driving you to greatness.",
+      "Hey {name}, {age} never looked so mischievous. May your {hobby} bring you cake and zero adulting.",
+      "Congrats on turning {age}, {name}! You officially have {age} years of experience in being awesome. Keep up the {hobby}ing!",
+      "Wishing you a wildly fun {age}th, {name}! May your {hobby} be as legendary as your cake-eating skills.",
+      "Happy {age}, {name}! They say wisdom comes with age. Luckily, {hobby} comes with snacks.",
+      "{name} — {age} and still a pro at {hobby}! Or at least an enthusiastic beginner. Same thing on birthdays.",
+      "Woohoo {name}! {age} years young. May your {hobby} bring you joy, chaos, and dessert.",
+      "Happy Birthday, {name}! At {age} you're like a fine {hobby} — a little quirky, very memorable, and best when shared with friends."
+    ];
+
+    const stack = document.getElementById('stack');
+    const nameEl = document.getElementById('name');
+    const ageEl = document.getElementById('age');
+    const hobbyEl = document.getElementById('hobby');
+    const makeBtn = document.getElementById('makeBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    // Build message with a chosen template
+    function makeMessage(name, age, hobby){
+      const t = templates[Math.floor(Math.random()*templates.length)];
+      const useHobby = hobby && hobby.trim().length > 0 ? hobby.trim() : "favorite hobby";
+      const filled = t.replace(/{name}/g, name).replace(/{age}/g, age).replace(/{hobby}/g, useHobby);
+      return filled;
+    }
+
+    // Create DOM card and insert at top of stack
+    function createCard(name, age, hobby){
+      // Create elements
+      const card = document.createElement('article');
+      card.className = 'card';
+      // compute order index (how many cards already)
+      const existing = stack.querySelectorAll('.card').length;
+      // assign data-order so CSS can style subtle stacking
+      card.setAttribute('data-order', existing < 4 ? existing : 'n');
+
+      // slight random rotation for added visual fun (but keep new card mostly straight)
+      const rot = (Math.random() * 3 - 1.5).toFixed(2); // -1.5..1.5deg
+      card.style.transform = `rotate(${rot}deg)`;
+
+      const greeting = document.createElement('div');
+      greeting.className = 'greeting';
+      greeting.textContent = `Happy ${ordinal(Number(age))}, ${name}!`;
+
+      const message = document.createElement('div');
+      message.className = 'message';
+      message.textContent = makeMessage(name, age, hobby);
+
+      const signature = document.createElement('div');
+      signature.className = 'signature';
+      signature.textContent = '— From your favorite birthday helper';
+
+      const confetti = document.createElement('div');
+      confetti.className = 'confetti';
+      confetti.textContent = '🎉';
+
+      card.appendChild(greeting);
+      card.appendChild(message);
+      card.appendChild(signature);
+      card.appendChild(confetti);
+
+      // Insert new at top: prepend so newest is on top and older cards are pushed down
+      if (stack.firstChild) {
+        stack.insertBefore(card, stack.firstChild);
+      } else {
+        stack.appendChild(card);
+      }
+
+      // Re-assign data-order attributes so stacked CSS positions update
+      const cards = stack.querySelectorAll('.card');
+      cards.forEach((c, i) => c.setAttribute('data-order', i < 4 ? i : 'n'));
+
+      // small appear animation
+      card.style.opacity = 0;
+      card.style.transform += ' translateY(-8px)';
+      requestAnimationFrame(() => {
+        card.style.transition = 'all 360ms ease';
+        card.style.opacity = 1;
+        card.style.transform = card.style.transform.replace(' translateY(-8px)', '');
+      });
+    }
+
+    makeBtn.addEventListener('click', () => {
+      const name = (nameEl.value || '').trim() || 'Friend';
+      const ageRaw = (ageEl.value || '').trim();
+      let age = parseInt(ageRaw, 10);
+      if (!age || age < 0) { age = 0; } // fallback
+
+      const hobby = (hobbyEl.value || '').trim();
+
+      createCard(name, age, hobby);
+
+      // keep inputs for convenience but optionally clear hobby
+      hobbyEl.value = '';
+      // focus name for quick next entry
+      nameEl.focus();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      if (!confirm('Clear all saved cards?')) return;
+      stack.innerHTML = '';
+    });
+
+    // Allow Enter key in inputs to generate card
+    [nameEl, ageEl, hobbyEl].forEach(el => {
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          makeBtn.click();
+        }
+      });
+    });
+
+    // Example starter card
+    window.addEventListener('load', () => {
+      createCard('Sam', 30, 'biking');
+    });
+  </script>
+</body>
+</html>
