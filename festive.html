@@ -1,0 +1,377 @@
+<!--
+2. Add a festive title and colors.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Festive Birthday Card Writer</title>
+  <style>
+    :root{
+      --bg1: #fff7f5;
+      --bg2: #f6fffb;
+      --accent1: #ff6b6b; /* coral */
+      --accent2: #7c5cff; /* purple */
+      --accent3: #ffd166; /* yellow */
+      --muted: #6b7280;
+      --card-bg: #ffffff;
+      --shadow: 0 8px 24px rgba(16,24,40,0.08);
+    }
+
+    /* Page background with soft diagonal gradient */
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 60%);
+      color: #0f172a;
+      padding: 28px;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    /* Festive banner */
+    .banner {
+      background: linear-gradient(90deg, rgba(255,107,107,0.12), rgba(124,92,255,0.08));
+      padding: 22px 20px;
+      position: relative;
+      border-bottom: 1px solid rgba(2,6,23,0.04);
+    }
+    .title {
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+    .title-emoji {
+      font-size: 1.6rem;
+      transform: translateY(-2px);
+    }
+    .subtitle {
+      margin: 6px 0 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    /* Simple confetti decoration using small colored dots */
+    .confetti {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .confetti span {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      opacity: 0.95;
+      transform-origin: center;
+      animation: floatConfetti 3200ms linear infinite;
+    }
+    /* different colors and animation delays will be set inline */
+    @keyframes floatConfetti {
+      0%   { transform: translateY(0) rotate(0deg) scale(1); opacity:1; }
+      50%  { transform: translateY(-6px) rotate(180deg) scale(0.95); opacity:0.9; }
+      100% { transform: translateY(0) rotate(360deg) scale(1); opacity:1; }
+    }
+
+    .content {
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 18px;
+    }
+
+    @media (max-width: 820px) {
+      .content { grid-template-columns: 1fr; }
+    }
+
+    /* Form inputs */
+    label { display:block; margin-top:8px; font-weight:700; font-size:0.95rem; }
+    input[type="text"], input[type="number"], datalist {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top:6px;
+      border: 1px solid #e6e9ef;
+      border-radius: 10px;
+      font-size: 1rem;
+      box-sizing: border-box;
+      background: linear-gradient(180deg,#fff,#fff);
+      outline: none;
+    }
+
+    .controls {
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+
+    button {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 0;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+    }
+    button:active { transform: translateY(1px); }
+
+    .primary {
+      background: linear-gradient(90deg,var(--accent1), var(--accent2));
+      color: white;
+    }
+    .secondary {
+      background: linear-gradient(90deg,#e9f6ff,#f3e8ff);
+      color: #3b2b6b;
+    }
+    .muted {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    /* Output card */
+    .preview {
+      padding: 16px;
+      background: linear-gradient(180deg,#fffdf8,#ffffff);
+      border-radius: 12px;
+      border: 1px dashed rgba(14,20,40,0.04);
+      min-height: 120px;
+      white-space: pre-wrap;
+      font-size: 1.02rem;
+    }
+
+    /* Right column (preview + tips) */
+    .side {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .tip {
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    footer {
+      padding: 12px 18px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      border-top: 1px solid rgba(2,6,23,0.04);
+      background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.9));
+    }
+
+    /* small responsive tweaks */
+    .input-block {
+      background: #fff;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(15,23,42,0.03);
+    }
+  </style>
+</head>
+<body>
+  <div class="container" role="main">
+    <div class="banner" aria-hidden="false">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <h1 class="title"><span class="title-emoji">🎉</span> Festive Birthday Card Writer</h1>
+          <div class="subtitle">Quick, funny birthday lines — now with a cheerful look!</div>
+        </div>
+        <div style="text-align:right; font-weight:700; color:var(--accent2);">Make it sparkle ✨</div>
+      </div>
+
+      <!-- Decorative confetti dots (positions/colors set inline) -->
+      <div class="confetti" aria-hidden="true">
+        <span style="left:6%; top:22%; background:#ff6b6b; animation-delay:0ms;"></span>
+        <span style="left:22%; top:10%; background:#ffd166; width:9px; height:9px; animation-delay:120ms;"></span>
+        <span style="left:38%; top:16%; background:#7c5cff; animation-delay:240ms;"></span>
+        <span style="left:54%; top:8%; background:#34d399; animation-delay:80ms;"></span>
+        <span style="left:72%; top:22%; background:#60a5fa; width:8px; height:8px; animation-delay:200ms;"></span>
+        <span style="left:88%; top:18%; background:#f59e0b; width:10px; height:10px; animation-delay:320ms;"></span>
+        <span style="left:12%; top:48%; background:#ef4444; animation-delay:440ms;"></span>
+        <span style="left:30%; top:50%; background:#a78bfa; animation-delay:360ms;"></span>
+        <span style="left:46%; top:44%; background:#f97316; animation-delay:500ms;"></span>
+        <span style="left:64%; top:52%; background:#10b981; animation-delay:620ms;"></span>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="input-block">
+        <label for="name">Name</label>
+        <input id="name" type="text" placeholder="E.g. Alex" />
+
+        <label for="age">Age</label>
+        <input id="age" type="number" min="0" placeholder="E.g. 29" />
+
+        <label for="hobby">Hobby (or anything they love)</label>
+        <input id="hobby" type="text" placeholder="E.g. gardening, gaming, knitting" list="hobby-suggestions" />
+        <datalist id="hobby-suggestions">
+          <option value="gaming"></option>
+          <option value="gardening"></option>
+          <option value="cooking"></option>
+          <option value="cycling"></option>
+          <option value="reading"></option>
+          <option value="knitting"></option>
+          <option value="hiking"></option>
+        </datalist>
+
+        <div class="controls" style="margin-top:12px;">
+          <button id="generate" class="primary">Generate message</button>
+          <button id="another" class="secondary">Another variation</button>
+          <button id="copy" class="muted">Copy to clipboard</button>
+        </div>
+      </div>
+
+      <div class="side" aria-live="polite">
+        <div style="font-weight:700; color:#0b1220;">Preview</div>
+        <div class="preview" id="output">Your funny message will appear here after you click "Generate message".</div>
+        <div class="tip">Tip: Leave fields blank for sillier generic results. Use "Another variation" to get different jokes.</div>
+      </div>
+    </div>
+
+    <footer>
+      Made festive — feel free to edit the colors or add more templates in the JavaScript below.
+    </footer>
+  </div>
+
+  <script>
+    // Message templates and logic (same friendly functionality)
+    const templates = [
+      "Happy {ageOrd}, {name}! Time to celebrate like it's your hobby's retirement party — but with cake.",
+      "Hey {name}, {age} never looked so good. Keep {hobby}ing and pretending age is just a high score.",
+      "Happy birthday, {name}! At {age}, you still have the energy of someone who just discovered {hobby}.",
+      "{name}! Congrats on turning {age} — finally old enough to give wise advice about {hobby} and blame it on experience.",
+      "Wishing you a {age}th filled with laughs, cake, and more {hobby} than your social feed can handle.",
+      "To {name}, age {age}: may your {hobby} always beat Mondays and your cake have extra frosting.",
+      "Happy {ageOrd}, {name}. You're the only person I know who can turn {hobby} into an extreme sport. Carry on!",
+      "{name}, at {age} you have perfected the art of celebrating. Step 1: cake. Step 2: {hobby}. Step 3: repeat."
+    ];
+
+    const nameInput = document.getElementById('name');
+    const ageInput = document.getElementById('age');
+    const hobbyInput = document.getElementById('hobby');
+    const outputEl = document.getElementById('output');
+    const generateBtn = document.getElementById('generate');
+    const anotherBtn = document.getElementById('another');
+    const copyBtn = document.getElementById('copy');
+
+    function randomChoice(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function ordinal(n) {
+      n = Number(n) || 0;
+      const s = ["th","st","nd","rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
+    function buildMessage(useTemplateIndex = null) {
+      const rawName = nameInput.value.trim();
+      const rawAge = ageInput.value.trim();
+      const rawHobby = hobbyInput.value.trim();
+
+      const name = rawName || "Friend";
+      const age = rawAge || "many";
+      const hobby = rawHobby || "fun";
+
+      const ageOrd = (rawAge ? ordinal(rawAge) : "special");
+
+      let template;
+      if (typeof useTemplateIndex === 'number') {
+        template = templates[useTemplateIndex % templates.length];
+      } else {
+        template = randomChoice(templates);
+      }
+
+      let msg = template
+        .replace(/{name}/g, name)
+        .replace(/{age}/g, age)
+        .replace(/{ageOrd}/g, ageOrd)
+        .replace(/{hobby}/g, hobby);
+
+      msg += " 🎉";
+      return msg;
+    }
+
+    let lastTemplateIndex = null;
+
+    function generateMessage(preferDifferent = true) {
+      let index;
+      if (preferDifferent) {
+        if (templates.length <= 1) index = 0;
+        else {
+          do {
+            index = Math.floor(Math.random() * templates.length);
+          } while (index === lastTemplateIndex);
+        }
+      } else {
+        index = Math.floor(Math.random() * templates.length);
+      }
+      lastTemplateIndex = index;
+
+      const msg = buildMessage(index);
+      outputEl.textContent = msg;
+    }
+
+    async function copyOutput() {
+      const text = outputEl.textContent || "";
+      if (!text.trim()) {
+        alert("Nothing to copy yet. Click 'Generate message' first.");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => { copyBtn.textContent = "Copy to clipboard"; }, 1400);
+      } catch (err) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => { copyBtn.textContent = "Copy to clipboard"; }, 1400);
+        } catch (e) {
+          alert("Unable to copy. You can manually select and copy the message.");
+        }
+        document.body.removeChild(ta);
+      }
+    }
+
+    generateBtn.addEventListener('click', () => generateMessage(true));
+    anotherBtn.addEventListener('click', () => generateMessage(true));
+    copyBtn.addEventListener('click', copyOutput);
+
+    [nameInput, ageInput, hobbyInput].forEach(el => {
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          generateMessage(true);
+        }
+      });
+    });
+
+    // start with empty inputs for playful results
+    nameInput.value = "";
+    ageInput.value = "";
+    hobbyInput.value = "";
+  </script>
+</body>
+</html>

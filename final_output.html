@@ -1,0 +1,458 @@
+<!--
+4. final output : prompt
+Add a fun title at the top of the page. And instead of replacing the old cards, keep them visible and stack them underneath the new ones.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sparkle & Stack — Birthday Card Writer</title>
+  <style>
+    :root{
+      --page-bg1: #fff7f5;
+      --page-bg2: #f6fffb;
+      --accent1: #ff6b6b;
+      --accent2: #7c5cff;
+      --paper: #fffefc;
+      --paper-edge: #f1ece7;
+      --muted: #6b7280;
+      --shadow: 0 16px 40px rgba(12,18,36,0.12);
+      --card-width: 420px;
+      --card-height: 520px;
+    }
+
+    html,body { height:100%; margin:0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(135deg,var(--page-bg1),var(--page-bg2));
+      color: #0b1220;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Fun page title at the very top */
+    .page-title {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      max-width:1100px;
+      margin: 0 auto 18px auto;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: linear-gradient(90deg, rgba(124,92,255,0.12), rgba(255,107,107,0.08));
+      box-shadow: 0 8px 30px rgba(12,18,36,0.06);
+      border: 1px solid rgba(12,18,36,0.03);
+    }
+    .page-title h1 {
+      margin:0;
+      font-size:1.4rem;
+      letter-spacing: -0.02em;
+    }
+    .page-title .sparkles { font-size:1.6rem; transform: translateY(-1px); }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 460px;
+      gap: 22px;
+      align-items: start;
+    }
+
+    @media (max-width: 980px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(12,18,36,0.04);
+    }
+
+    h2 { margin:0 0 8px 0; font-size:1.2rem; }
+    .lead { color:var(--muted); margin:0 0 16px 0; }
+
+    label { display:block; margin-top:12px; font-weight:700; font-size:0.95rem; }
+    input[type="text"], input[type="number"], textarea {
+      width:100%;
+      padding:10px 12px;
+      margin-top:6px;
+      border:1px solid #e6e9ef;
+      border-radius:10px;
+      font-size:1rem;
+      box-sizing:border-box;
+      background: #fff;
+    }
+    textarea { min-height:80px; resize:vertical; }
+
+    .controls {
+      margin-top:14px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    button {
+      padding:10px 14px;
+      border-radius:10px;
+      border:0;
+      cursor:pointer;
+      font-weight:700;
+      box-shadow: 0 8px 20px rgba(12,18,36,0.06);
+    }
+    .primary { background: linear-gradient(90deg,var(--accent1),var(--accent2)); color:white; }
+    .secondary { background:#eef2ff; color:#3b2b6b; }
+    .muted { background:#f3f4f6; color:#374151; }
+
+    .hint { margin-top:10px; color:var(--muted); font-size:0.95rem; }
+
+    /* Right side: stack area */
+    .stack-area {
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      align-items:center;
+    }
+
+    .stack-controls {
+      width:100%;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      align-items:center;
+    }
+    .stack-count { color:var(--muted); font-weight:700; }
+
+    /* Card item (smaller copy of preview) */
+    .card-item {
+      width: var(--card-width);
+      background: linear-gradient(180deg, var(--paper), var(--paper-edge));
+      border-radius: 10px;
+      box-shadow: 0 18px 48px rgba(12,18,36,0.10);
+      padding: 10px;
+      box-sizing: border-box;
+      position: relative;
+      border: 1px solid rgba(12,18,36,0.04);
+    }
+
+    .card {
+      width: 100%;
+      height: auto;
+      display:flex;
+      background: linear-gradient(180deg,#fffefc,#fffdf9);
+      border-radius:6px;
+      box-sizing:border-box;
+      overflow:hidden;
+      border: 1px solid rgba(12,18,36,0.04);
+    }
+    .card-left, .card-right {
+      flex:1 1 50%;
+      padding: 22px;
+      box-sizing: border-box;
+    }
+    .card-right { border-left: 1px dotted rgba(12,18,36,0.06); }
+
+    .greeting { font-size:1.2rem; font-weight:800; margin:0 0 6px 0; color:#0b1220; }
+    .message { font-size:0.98rem; color:#2b3440; white-space:pre-wrap; margin:0 0 8px 0; }
+    .signature { margin-top:auto; text-align:right; font-weight:700; color:#5b4a86; }
+
+    .note { font-size:0.95rem; color:#2b3440; white-space:pre-wrap; min-height:42px; }
+
+    /* per-card action bar */
+    .card-actions {
+      display:flex;
+      gap:8px;
+      margin-top:10px;
+      justify-content:flex-end;
+    }
+    .small-btn {
+      padding:6px 8px;
+      border-radius:8px;
+      font-weight:700;
+      cursor:pointer;
+      border:0;
+      background:#fff;
+      box-shadow: 0 6px 18px rgba(12,18,36,0.05);
+    }
+    .small-btn.copy { background: #e6fffa; color:#065f46; }
+    .small-btn.remove { background: #fff1f2; color:#9f1239; }
+
+    /* When many cards stack, make them scrollable */
+    .stack-list {
+      width:100%;
+      max-height: 720px;
+      overflow:auto;
+      padding: 6px 0;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:12px;
+    }
+
+    /* smaller note for instructions */
+    .small { font-size:0.9rem; color:var(--muted); }
+
+    @media (max-width: 420px) {
+      :root { --card-width: 360px; --card-height: 460px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-title" aria-hidden="false">
+    <div class="sparkles">✨</div>
+    <div>
+      <h1>Sparkle & Stack — Birthday Card Writer</h1>
+      <div class="small">Write one card after another — older cards stack below so you can pick your favorite.</div>
+    </div>
+  </div>
+
+  <div class="container" role="main">
+    <!-- Left inputs -->
+    <div class="panel" aria-labelledby="heading">
+      <h2 id="heading">Create an inside message</h2>
+      <p class="lead">Fill in the fields and click "Generate inside message" to add a new card to the stack on the right.</p>
+
+      <label for="name">Recipient name</label>
+      <input id="name" type="text" placeholder="E.g. Alex" />
+
+      <label for="age">Age</label>
+      <input id="age" type="number" min="0" placeholder="E.g. 29" />
+
+      <label for="hobby">Hobby (optional)</label>
+      <input id="hobby" type="text" placeholder="E.g. gardening, gaming" />
+
+      <label for="note">Short personal note (left page) — optional</label>
+      <textarea id="note" placeholder="Write a sentence or two that will appear on the left inside page..."></textarea>
+
+      <label for="signature">Signature (shown at bottom right)</label>
+      <input id="signature" type="text" placeholder="— Your friend" />
+
+      <div class="controls">
+        <button id="generate" class="primary">Generate inside message</button>
+        <button id="another" class="secondary">Another variation (use same inputs)</button>
+        <button id="clear-stack" class="muted">Clear stack</button>
+      </div>
+
+      <p class="hint">Tip: Each time you generate, a new card is added to the stack on the right. Use "Another variation" to create a different message with the same inputs.</p>
+    </div>
+
+    <!-- Right stack area -->
+    <div class="stack-area">
+      <div class="panel" style="width:100%; box-shadow:var(--shadow);">
+        <div class="stack-controls">
+          <div style="font-weight:800;">Saved cards</div>
+          <div class="stack-count" id="stack-count">0 cards</div>
+        </div>
+
+        <div class="stack-list" id="stack-list" aria-live="polite" aria-label="Generated cards">
+          <!-- generated cards will appear here; newest cards are prepended at the top -->
+        </div>
+
+        <div class="small" style="margin-top:10px;">New cards appear at the top. Each card has Copy and Remove actions.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Beginner-friendly: generates small "inside card" previews and keeps a stack of them.
+    const templates = [
+      "Time to celebrate like {hobby} came with unlimited cake — even if {hobby} is just scrolling the web.",
+      "You've hit level {age} — now with extra frosting and fewer tutorial pop-ups.",
+      "Wishing you a day where every gift is exactly what you wanted and the candles behave themselves.",
+      "May your {hobby} be flawless and your cake be legendary. Also: naps are allowed today.",
+      "Another year more fabulous. Keep {hobby}ing and collecting stories to pretend you remember.",
+      "Cake, confetti, and all the {hobby}-inspired victories you can handle. Go get 'em!",
+      "If age is a number, you just unlocked the 'Awesome Advice About {hobby}' achievement.",
+      "Party like it's your own hobby's birthday — louder, brighter, and with more sprinkles."
+    ];
+
+    // Inputs
+    const nameInput = document.getElementById('name');
+    const ageInput = document.getElementById('age');
+    const hobbyInput = document.getElementById('hobby');
+    const noteInput = document.getElementById('note');
+    const signatureInput = document.getElementById('signature');
+
+    // Controls
+    const generateBtn = document.getElementById('generate');
+    const anotherBtn = document.getElementById('another');
+    const clearStackBtn = document.getElementById('clear-stack');
+
+    // Stack UI
+    const stackList = document.getElementById('stack-list');
+    const stackCount = document.getElementById('stack-count');
+
+    let lastIndex = null;
+
+    function ordinal(n) {
+      n = Number(n) || 0;
+      const s = ["th","st","nd","rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
+    function pickTemplateIndex(preferDifferent = true) {
+      if (templates.length <= 1) return 0;
+      let idx;
+      if (!preferDifferent) {
+        idx = Math.floor(Math.random() * templates.length);
+        lastIndex = idx;
+        return idx;
+      }
+      do {
+        idx = Math.floor(Math.random() * templates.length);
+      } while (idx === lastIndex);
+      lastIndex = idx;
+      return idx;
+    }
+
+    function buildCardContent(preferDifferent = true) {
+      const rawName = nameInput.value.trim();
+      const rawAge = ageInput.value.trim();
+      const rawHobby = hobbyInput.value.trim();
+
+      const name = rawName || "Friend";
+      const age = rawAge || "";
+      const hobby = rawHobby || "fun";
+
+      const greeting = rawAge ? `Happy ${ordinal(rawAge)}, ${name}!` : `Happy Birthday, ${name}!`;
+
+      const idx = pickTemplateIndex(preferDifferent);
+      const template = templates[idx];
+      const message = template
+        .replace(/{name}/g, name)
+        .replace(/{age}/g, age || "many")
+        .replace(/{hobby}/g, hobby);
+
+      const leftNote = noteInput.value.trim() || "Write something heartfelt (or silly) here on the left page.";
+      const signature = signatureInput.value.trim() || "— Your friend";
+
+      return { greeting, message, leftNote, signature };
+    }
+
+    // Create a DOM element for a single card (returns element)
+    function createCardElement({ greeting, message, leftNote, signature }) {
+      const outer = document.createElement('div');
+      outer.className = 'card-item';
+
+      // Build inner HTML using classes (no duplicate IDs)
+      outer.innerHTML = `
+        <div class="card">
+          <div class="card-left">
+            <div class="note">${escapeHtml(leftNote)}</div>
+          </div>
+          <div class="card-right">
+            <div class="greeting">${escapeHtml(greeting)}</div>
+            <div class="message">${escapeHtml(message)}</div>
+            <div class="signature">${escapeHtml(signature)}</div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="small-btn copy">Copy</button>
+          <button class="small-btn remove">Remove</button>
+        </div>
+      `;
+
+      // Hook up actions
+      const copyBtn = outer.querySelector('.small-btn.copy');
+      const removeBtn = outer.querySelector('.small-btn.remove');
+
+      copyBtn.addEventListener('click', async () => {
+        const text = `${leftNote}\n\n${greeting}\n${message}\n\n${signature}`;
+        try {
+          await navigator.clipboard.writeText(text);
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1200);
+        } catch (e) {
+          // fallback
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          try {
+            document.execCommand('copy');
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1200);
+          } catch (err) {
+            alert('Unable to copy. Select the text manually.');
+          }
+          document.body.removeChild(ta);
+        }
+      });
+
+      removeBtn.addEventListener('click', () => {
+        outer.remove();
+        updateStackCount();
+      });
+
+      return outer;
+    }
+
+    // Prepend new card to stack (newest on top)
+    function addCardToStack(preferDifferent = true) {
+      const content = buildCardContent(preferDifferent);
+      const el = createCardElement(content);
+      stackList.prepend(el);
+      updateStackCount();
+      // scroll so the newest (top) is visible if user was scrolled down
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function updateStackCount() {
+      const count = stackList.children.length;
+      stackCount.textContent = `${count} card${count === 1 ? '' : 's'}`;
+    }
+
+    // Clear the stack with confirmation
+    function clearStack() {
+      if (!stackList.children.length) return;
+      if (!confirm('Clear all saved cards from the stack? This cannot be undone.')) return;
+      stackList.innerHTML = '';
+      updateStackCount();
+    }
+
+    // Simple HTML escape for text inserted via innerHTML
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/\n/g, '<br>');
+    }
+
+    // Buttons
+    generateBtn.addEventListener('click', () => addCardToStack(true));
+    anotherBtn.addEventListener('click', () => addCardToStack(false));
+    clearStackBtn.addEventListener('click', clearStack);
+
+    // Pressing Enter in inputs generates a new card
+    [nameInput, ageInput, hobbyInput].forEach(el => {
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addCardToStack(true);
+        }
+      });
+    });
+
+    // Live update left-note / signature while typing (so new cards will include latest text)
+    // (No special action needed.)
+
+    // Initialize: create one starter card so the right side isn't empty
+    // Start with empty inputs for playful results
+    nameInput.value = "";
+    ageInput.value = "";
+    hobbyInput.value = "";
+    noteInput.value = "";
+    signatureInput.value = "";
+
+    // Add an initial example card
+    addCardToStack(false);
+  </script>
+</body>
+</html>

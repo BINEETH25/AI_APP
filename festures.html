@@ -1,0 +1,460 @@
+<!--
+3. Adding Features in prompt:
+Display the card on the right side, and make it look like the inside of a birthday card.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Birthday Card — Inside Card Preview</title>
+  <style>
+    /*
+      Beginner-friendly: Styles to show inputs on the left and an "inside of a card"
+      mockup on the right. The card looks like an open folded card with a crease
+      in the middle. You can edit colors and sizes below.
+    */
+
+    :root{
+      --page-bg1: #fff7f5;
+      --page-bg2: #f6fffb;
+      --accent1: #ff6b6b;   /* coral */
+      --accent2: #7c5cff;   /* purple */
+      --paper: #fffefc;     /* paper color */
+      --paper-edge: #f1ece7;/* slight edge */
+      --muted: #6b7280;
+      --shadow: 0 16px 40px rgba(12,18,36,0.12);
+      --card-width: 420px;  /* overall card mockup width */
+      --card-height: 520px;
+    }
+
+    html,body { height:100%; margin:0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(135deg,var(--page-bg1),var(--page-bg2));
+      color: #0b1220;
+      padding: 28px;
+      box-sizing: border-box;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 460px; /* left: inputs, right: card */
+      gap: 22px;
+      align-items: start;
+    }
+
+    @media (max-width: 980px) {
+      .container { grid-template-columns: 1fr; padding-bottom: 28px; }
+    }
+
+    /* Inputs panel */
+    .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(12,18,36,0.04);
+    }
+
+    h1 { margin:0 0 8px 0; font-size:1.4rem; }
+    .lead { color:var(--muted); margin:0 0 16px 0; }
+
+    label { display:block; margin-top:12px; font-weight:700; font-size:0.95rem; }
+    input[type="text"], input[type="number"], textarea {
+      width:100%;
+      padding:10px 12px;
+      margin-top:6px;
+      border:1px solid #e6e9ef;
+      border-radius:10px;
+      font-size:1rem;
+      box-sizing:border-box;
+      background: #fff;
+    }
+    textarea { min-height:80px; resize:vertical; }
+
+    .controls {
+      margin-top:14px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    button {
+      padding:10px 14px;
+      border-radius:10px;
+      border:0;
+      cursor:pointer;
+      font-weight:700;
+      box-shadow: 0 8px 20px rgba(12,18,36,0.06);
+    }
+    .primary { background: linear-gradient(90deg,var(--accent1),var(--accent2)); color:white; }
+    .secondary { background:#eef2ff; color:#3b2b6b; }
+    .muted { background:#f3f4f6; color:#374151; }
+
+    .hint { margin-top:10px; color:var(--muted); font-size:0.95rem; }
+
+    /* Right side — card mockup container */
+    .card-area {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+    }
+
+    /* Card outer (gives a subtle border / edge to simulate paper thickness) */
+    .card-outer {
+      width: var(--card-width);
+      height: var(--card-height);
+      background: linear-gradient(180deg, var(--paper), var(--paper-edge));
+      border-radius: 10px;
+      box-shadow: 0 20px 60px rgba(12,18,36,0.14);
+      padding: 12px;
+      box-sizing: border-box;
+      position: relative;
+      overflow: visible;
+    }
+
+    /* The open card: two panels side-by-side representing left & right inside */
+    .card {
+      width: 100%;
+      height: 100%;
+      display:flex;
+      background: linear-gradient(180deg,#fffefc,#fffdf9);
+      border-radius:6px;
+      box-sizing:border-box;
+      overflow:hidden;
+      position: relative;
+      border: 1px solid rgba(12,18,36,0.04);
+    }
+
+    /* Left and right inside pages */
+    .card-left, .card-right {
+      flex:1 1 50%;
+      padding: 28px;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    /* Slight difference to simulate that left page is for personal note */
+    .card-left {
+      background: linear-gradient(180deg,#fffefc,#fffdf9);
+    }
+
+    .card-right {
+      background: linear-gradient(180deg,#fffefe,#fffaf6);
+      border-left: 1px dotted rgba(12,18,36,0.06); /* inner fold seam */
+    }
+
+    /* center crease: subtle vertical shadow/line in the middle */
+    .card::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      transform: translateX(-1px);
+      background: linear-gradient(180deg, rgba(12,18,36,0.02), rgba(12,18,36,0.04), rgba(12,18,36,0.02));
+      pointer-events: none;
+      mix-blend-mode: multiply;
+    }
+
+    /* Left page lined paper effect (optional) */
+    .card-left .lines {
+      position:absolute;
+      left:18px;
+      right:18px;
+      top:26px;
+      bottom:26px;
+      background-image: linear-gradient(rgba(12,18,36,0.03) 1px, transparent 1px);
+      background-size: 100% 28px;
+      opacity:0.6;
+      z-index:0;
+      border-radius:4px;
+    }
+    .card-left .note {
+      position:relative;
+      z-index:1;
+      font-size:0.98rem;
+      color:#2b3440;
+      white-space:pre-wrap;
+    }
+
+    /* Right page greeting (big) and message */
+    .greeting {
+      font-size:1.6rem;
+      font-weight:800;
+      color: #0b1220;
+      margin:0 0 8px 0;
+    }
+    .message {
+      font-size:1.02rem;
+      color:#2b3440;
+      line-height:1.4;
+      margin:0 0 14px 0;
+      white-space:pre-wrap;
+    }
+    .signature {
+      margin-top:auto;
+      text-align:right;
+      font-weight:700;
+      color:#5b4a86;
+    }
+
+    /* Decorative top corner (ribbon) */
+    .ribbon {
+      position:absolute;
+      top:8px;
+      right:8px;
+      background: linear-gradient(90deg,var(--accent2),var(--accent1));
+      color:white;
+      padding:6px 10px;
+      border-radius:8px;
+      font-weight:800;
+      font-size:0.9rem;
+      box-shadow: 0 6px 18px rgba(12,18,36,0.08);
+    }
+
+    /* Small responsive tweak to shrink the card on narrow screens */
+    @media (max-width: 420px) {
+      :root { --card-width: 360px; --card-height: 460px; }
+      .container { padding: 12px; }
+    }
+
+    /* Print only the card area when printing */
+    @media print {
+      body * { visibility: hidden; }
+      .card-outer, .card-outer * { visibility: visible; }
+      .card-outer { position: absolute; left: 0; top:0; width: 100%; height: auto; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" role="main">
+    <!-- Left inputs -->
+    <div class="panel" aria-labelledby="heading">
+      <h1 id="heading">Card writer — inside preview</h1>
+      <p class="lead">Fill name, age, hobby and an optional short personal note/signature. The mockup on the right shows the inside of an open birthday card.</p>
+
+      <label for="name">Recipient name</label>
+      <input id="name" type="text" placeholder="E.g. Alex" />
+
+      <label for="age">Age</label>
+      <input id="age" type="number" min="0" placeholder="E.g. 29" />
+
+      <label for="hobby">Hobby (optional)</label>
+      <input id="hobby" type="text" placeholder="E.g. gardening, gaming" />
+
+      <label for="note">Short personal note (left page) — optional</label>
+      <textarea id="note" placeholder="Write a sentence or two that will appear on the left inside page..."></textarea>
+
+      <label for="signature">Signature (shown at bottom right)</label>
+      <input id="signature" type="text" placeholder="— Your friend" />
+
+      <div class="controls">
+        <button id="generate" class="primary">Generate inside message</button>
+        <button id="another" class="secondary">Another variation</button>
+        <button id="copy" class="muted">Copy inside text</button>
+        <button id="print" class="muted">Print card</button>
+      </div>
+
+      <p class="hint">Tip: Leave fields blank for playful generic text. Click "Another variation" to change the right-page message while keeping your inputs.</p>
+    </div>
+
+    <!-- Right card preview -->
+    <div class="card-area">
+      <div class="card-outer" role="region" aria-label="Card preview">
+        <div class="ribbon">Happy Day</div>
+
+        <div class="card" id="card">
+          <!-- LEFT INSIDE: personal note area -->
+          <div class="card-left" aria-hidden="false">
+            <div class="lines" aria-hidden="true"></div>
+            <div class="note" id="left-note">Your personal note will appear here. You can use this space to write a short message or wish.</div>
+          </div>
+
+          <!-- RIGHT INSIDE: main greeting + message -->
+          <div class="card-right" aria-live="polite">
+            <h2 class="greeting" id="greeting">Happy Birthday!</h2>
+            <div class="message" id="message">A funny birthday line will appear here after you click "Generate inside message".</div>
+            <div class="signature" id="signature-preview">— Your friend</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /*
+      Beginner-friendly JavaScript:
+      - templates: short funny sentences used on the right page (message)
+      - greeting: larger heading generated from name & age
+      - left note & signature: taken from inputs
+    */
+
+    const templates = [
+      "Time to celebrate like {hobby} came with unlimited cake — even if {hobby} is just scrolling the web.",
+      "You've hit level {age} — now with extra frosting and fewer tutorial pop-ups.",
+      "Wishing you a day where every gift is exactly what you wanted and the candles behave themselves.",
+      "May your {hobby} be flawless and your cake be legendary. Also: naps are allowed today.",
+      "Another year more fabulous. Keep {hobby}ing and collecting stories to pretend you remember.",
+      "Cake, confetti, and all the {hobby}-inspired victories you can handle. Go get 'em!",
+      "If age is a number, you just unlocked the 'Awesome Advice About {hobby}' achievement.",
+      "Party like it's your own hobby's birthday — louder, brighter, and with more sprinkles."
+    ];
+
+    // Elements
+    const nameInput = document.getElementById('name');
+    const ageInput = document.getElementById('age');
+    const hobbyInput = document.getElementById('hobby');
+    const noteInput = document.getElementById('note');
+    const signatureInput = document.getElementById('signature');
+
+    const greetingEl = document.getElementById('greeting');
+    const messageEl = document.getElementById('message');
+    const leftNoteEl = document.getElementById('left-note');
+    const signaturePreviewEl = document.getElementById('signature-preview');
+
+    const generateBtn = document.getElementById('generate');
+    const anotherBtn = document.getElementById('another');
+    const copyBtn = document.getElementById('copy');
+    const printBtn = document.getElementById('print');
+
+    // Choose a random template index; keep last to help "another" choose different one.
+    let lastIndex = null;
+
+    function randomIndexDifferent() {
+      if (templates.length <= 1) return 0;
+      let idx;
+      do {
+        idx = Math.floor(Math.random() * templates.length);
+      } while (idx === lastIndex);
+      lastIndex = idx;
+      return idx;
+    }
+
+    // Ordinal helper (1st, 2nd, 3rd...)
+    function ordinal(n) {
+      n = Number(n) || 0;
+      const s = ["th","st","nd","rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
+    // Build right-page content: greeting and message (multi-line).
+    function buildRightContent(useDifferent = true) {
+      const rawName = nameInput.value.trim();
+      const rawAge = ageInput.value.trim();
+      const rawHobby = hobbyInput.value.trim();
+
+      const name = rawName || "Friend";
+      const age = rawAge || ""; // empty -> don't show numeric age in greeting if not provided
+      const hobby = rawHobby || "fun";
+
+      // Greeting: prefer "Happy 30th, Alex!" when age provided, otherwise "Happy Birthday, Alex!"
+      const greeting = rawAge ? `Happy ${ordinal(rawAge)}, ${name}!` : `Happy Birthday, ${name}!`;
+
+      // select template and replace placeholders
+      const idx = useDifferent ? randomIndexDifferent() : Math.floor(Math.random() * templates.length);
+      const template = templates[idx];
+      const body = template
+        .replace(/{name}/g, name)
+        .replace(/{age}/g, age || "many")
+        .replace(/{hobby}/g, hobby);
+
+      return { greeting, body };
+    }
+
+    // Update preview UI from inputs. If preserveTemplate is false, pick a new random template.
+    function updatePreview(preserveTemplate = false) {
+      // Left note and signature are direct from inputs (or defaults)
+      const leftNote = noteInput.value.trim() || "Write something heartfelt (or silly) here on the left page.";
+      const signatureText = signatureInput.value.trim() || "— Your friend";
+
+      // Build right content (if preserveTemplate is true, still pick new by default; "Another variation" uses different template)
+      const right = buildRightContent(!preserveTemplate); // pass true to prefer different
+      greetingEl.textContent = right.greeting;
+      messageEl.textContent = right.body;
+      leftNoteEl.textContent = leftNote;
+      signaturePreviewEl.textContent = signatureText;
+    }
+
+    // Copy the inside text (left note + greeting + message + signature) to clipboard
+    async function copyInside() {
+      const left = leftNoteEl.textContent.trim();
+      const greet = greetingEl.textContent.trim();
+      const msg = messageEl.textContent.trim();
+      const sign = signaturePreviewEl.textContent.trim();
+
+      const full = `${left}\n\n${greet}\n${msg}\n\n${sign}`;
+      if (!full.trim()) {
+        alert("Nothing to copy. Click Generate first.");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(full);
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => copyBtn.textContent = "Copy inside text", 1300);
+      } catch (e) {
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = full;
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => copyBtn.textContent = "Copy inside text", 1300);
+        } catch (err) {
+          alert("Unable to copy. Select the text manually instead.");
+        }
+        document.body.removeChild(ta);
+      }
+    }
+
+    // Print the card (uses CSS print rules to only print the card area)
+    function printCard() {
+      window.print();
+    }
+
+    // Event listeners
+    generateBtn.addEventListener('click', () => updatePreview(true));
+    anotherBtn.addEventListener('click', () => updatePreview(false));
+    copyBtn.addEventListener('click', copyInside);
+    printBtn.addEventListener('click', printCard);
+
+    // Also update preview live when typing (left note & signature show immediately).
+    [noteInput, signatureInput].forEach(el => {
+      el.addEventListener('input', () => {
+        // update left note / signature only quickly without changing template
+        leftNoteEl.textContent = noteInput.value.trim() || "Write something heartfelt (or silly) here on the left page.";
+        signaturePreviewEl.textContent = signatureInput.value.trim() || "— Your friend";
+      });
+    });
+
+    // If users press Enter in hobby/age/name, generate a message
+    [nameInput, ageInput, hobbyInput].forEach(el => {
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          updatePreview(true);
+        }
+      });
+    });
+
+    // Initialize with friendly defaults (empty inputs but a generated template)
+    nameInput.value = "";
+    ageInput.value = "";
+    hobbyInput.value = "";
+    noteInput.value = "";
+    signatureInput.value = "";
+
+    // Create an initial preview (this picks a random template)
+    updatePreview(false);
+  </script>
+</body>
+</html>
