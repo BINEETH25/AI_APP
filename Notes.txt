@@ -1,0 +1,6 @@
+1. Prompting : is telling AI what you want it to do.
+
+
+Build - in - steps :
+
+1. GOAL  -> 2. INPUT  -> 3. LAYOUT  -> 4. FEATURES  -> 5. OUTPUT.

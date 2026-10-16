@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Funny Birthday Card Writer</title>
+  <style>
+    /* Simple, friendly styling for beginners */
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      margin: 0;
+      padding: 24px;
+      background: linear-gradient(180deg,#f8fafc,#fff);
+      color: #111827;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(12, 18, 36, 0.08);
+      padding: 20px;
+    }
+    h1 { margin-top: 0; font-size: 1.4rem; }
+    label { display:block; margin-top:12px; font-weight:600; }
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top:6px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    .row {
+      display:flex;
+      gap:10px;
+      margin-top:12px;
+    }
+    button {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 0;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .primary { background: #2563eb; color: white; }
+    .secondary { background: #eef2ff; color: #3730a3; }
+    .muted { background: #f3f4f6; color: #374151; }
+    .output {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px dashed #e5e7eb;
+      min-height: 72px;
+      white-space: pre-wrap;
+    }
+    .hint { margin-top:8px; font-size:0.9rem; color:#6b7280; }
+    footer { margin-top:16px; font-size:0.85rem; color:#6b7280; }
+  </style>
+</head>
+<body>
+  <div class="container" role="main">
+    <h1>Funny Birthday Card Writer</h1>
+
+    <label for="name">Name</label>
+    <input id="name" type="text" placeholder="E.g. Alex" />
+
+    <label for="age">Age</label>
+    <input id="age" type="number" min="0" placeholder="E.g. 29" />
+
+    <label for="hobby">Hobby (or anything they love)</label>
+    <input id="hobby" type="text" placeholder="E.g. gardening, gaming, knitting" list="hobby-suggestions" />
+    <datalist id="hobby-suggestions">
+      <option value="gaming"></option>
+      <option value="gardening"></option>
+      <option value="cooking"></option>
+      <option value="cycling"></option>
+      <option value="reading"></option>
+      <option value="knitting"></option>
+      <option value="hiking"></option>
+    </datalist>
+
+    <div class="row">
+      <button id="generate" class="primary">Generate message</button>
+      <button id="another" class="secondary">Another variation</button>
+      <button id="copy" class="muted">Copy to clipboard</button>
+    </div>
+
+    <div class="output" id="output" aria-live="polite">
+      Your funny message will appear here after you click "Generate message".
+    </div>
+
+    <p class="hint">Tip: Leave fields blank for sillier generic results. Use "Another variation" to get different jokes.</p>
+    <footer>Made for quick birthday-card writing — feel free to edit the templates in the JS.</footer>
+  </div>
+
+  <script>
+    // Beginner-friendly JS: event handlers and message templates
+
+    // A small set of funny, friendly templates.
+    // Use {name}, {age}, {ageOrd}, {hobby} placeholders.
+    const templates = [
+      "Happy {ageOrd}, {name}! Time to celebrate like it's your hobby's retirement party — but with cake.",
+      "Hey {name}, {age} never looked so good. Keep {hobby}ing and pretending age is just a high score.",
+      "Happy birthday, {name}! At {age}, you still have the energy of someone who just discovered {hobby}.",
+      "{name}! Congrats on turning {age} — finally old enough to give wise advice about {hobby} and blame it on experience.",
+      "Wishing you a {age}th filled with laughs, cake, and more {hobby} than your Facebook friends can handle.",
+      "To {name}, age {age}: may your {hobby} always beat Mondays and your cake have extra frosting.",
+      "Happy {ageOrd}, {name}. You're the only person I know who can turn {hobby} into an extreme sport. Carry on!",
+      "{name}, at {age} you have perfected the art of celebrating. Step 1: cake. Step 2: {hobby}. Step 3: repeat."
+    ];
+
+    // Get DOM elements
+    const nameInput = document.getElementById('name');
+    const ageInput = document.getElementById('age');
+    const hobbyInput = document.getElementById('hobby');
+    const outputEl = document.getElementById('output');
+    const generateBtn = document.getElementById('generate');
+    const anotherBtn = document.getElementById('another');
+    const copyBtn = document.getElementById('copy');
+
+    // Helper: choose a random item from array
+    function randomChoice(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    // Helper: make ordinal like 1st, 2nd, 3rd, 11th, 21st...
+    function ordinal(n) {
+      n = Number(n) || 0;
+      const s = ["th","st","nd","rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
+    // Build the message using inputs and one template
+    function buildMessage(useTemplateIndex = null) {
+      // Read values and tidy them
+      const rawName = nameInput.value.trim();
+      const rawAge = ageInput.value.trim();
+      const rawHobby = hobbyInput.value.trim();
+
+      const name = rawName || "Friend";
+      const age = rawAge || "many";
+      const hobby = rawHobby || "fun";
+
+      const ageOrd = (rawAge ? ordinal(rawAge) : "special");
+
+      // Select a template (optionally a specific index to get 'another' variation)
+      let template;
+      if (typeof useTemplateIndex === 'number') {
+        template = templates[useTemplateIndex % templates.length];
+      } else {
+        template = randomChoice(templates);
+      }
+
+      // Replace placeholders
+      let msg = template
+        .replace(/{name}/g, name)
+        .replace(/{age}/g, age)
+        .replace(/{ageOrd}/g, ageOrd)
+        .replace(/{hobby}/g, hobby);
+
+      // Add a cheerful emoji to the end (beginner-friendly)
+      msg += " 🎉";
+
+      return msg;
+    }
+
+    // Keep last used template index so "Another variation" picks a different one
+    let lastTemplateIndex = null;
+
+    // Generate and display a message
+    function generateMessage(preferDifferent = true) {
+      // If preferDifferent is true, try to pick a different template index
+      let index;
+      if (preferDifferent) {
+        // pick random index different from lastTemplateIndex if possible
+        if (templates.length <= 1) index = 0;
+        else {
+          do {
+            index = Math.floor(Math.random() * templates.length);
+          } while (index === lastTemplateIndex);
+        }
+      } else {
+        index = Math.floor(Math.random() * templates.length);
+      }
+      lastTemplateIndex = index;
+
+      const msg = buildMessage(index);
+      outputEl.textContent = msg;
+    }
+
+    // Copy output to clipboard
+    async function copyOutput() {
+      const text = outputEl.textContent || "";
+      if (!text.trim()) {
+        alert("Nothing to copy yet. Click 'Generate message' first.");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => { copyBtn.textContent = "Copy to clipboard"; }, 1600);
+      } catch (err) {
+        // Fallback for browsers that don't support clipboard API
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => { copyBtn.textContent = "Copy to clipboard"; }, 1600);
+        } catch (e) {
+          alert("Unable to copy. You can manually select and copy the message.");
+        }
+        document.body.removeChild(ta);
+      }
+    }
+
+    // Event listeners
+    generateBtn.addEventListener('click', () => generateMessage(true));
+    anotherBtn.addEventListener('click', () => generateMessage(true));
+    copyBtn.addEventListener('click', copyOutput);
+
+    // Allow pressing Enter in any input to generate
+    [nameInput, ageInput, hobbyInput].forEach(el => {
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          generateMessage(true);
+        }
+      });
+    });
+
+    // Pre-fill with a friendly example for first-time users
+    nameInput.value = "";
+    ageInput.value = "";
+    hobbyInput.value = "";
+
+    // Accessibility: ensure initial message is instructive
+    outputEl.setAttribute('aria-live', 'polite');
+  </script>
+</body>
+</html>

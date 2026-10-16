@@ -1,0 +1,17 @@
+Generating an App Using AI.
+
+
+Prompt1  : 
+Create a web page to help me write birthday cards.
+When i give a person's name, age and hobby, it should give me back a funny message.
+
+Prompt2: 
+Make it prettier by adding a festive title and colors.
+
+Prompt3 : 
+Display the card on the right side, and make it look like the inside of a birthday card.
+
+Prompt4 : 
+Add a fun title at the top of the page. And instead of replacing the old cards, keep them visible 
+and stack them underneath the new ones.
+
