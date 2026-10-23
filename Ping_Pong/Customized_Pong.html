@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Custom Pong — Sound, High Score, Speeds, Power-ups, 2P</title>
+  <style>
+    /* Stretch background image to the window */
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      user-select: none;
+      background-image: url("https://raw.githubusercontent.com/https-deeplearning-ai/lc-build-with-andrew-platform/main/img/tabletennis43.jpg");
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: 100% 100%;
+      padding: 16px;
+      box-sizing: border-box;
+      color: #e6f7f2;
+    }
+
+    header {
+      width: 900px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 12px;
+      background: rgba(0,0,0,0.35);
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .controls-left, .controls-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    label { font-size: 13px; color: #f0f7f1; }
+    input[type="number"] { width: 64px; padding:4px; border-radius:6px; }
+    .small { font-size: 12px; color: #cfe8e0; }
+
+    #game-container { position: relative; width: 900px; }
+    canvas {
+      width: 900px;
+      height: 520px;
+      border-radius: 6px;
+      display: block;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.6);
+      background: transparent;
+    }
+
+    #bottom-bar {
+      width: 900px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      gap: 12px;
+      background: rgba(0,0,0,0.35);
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+
+    .score { font-size: 18px; font-weight: bold; color: #ffd166; }
+    button {
+      background: #2ec4b6; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(0.95); }
+
+    .overlay { position: absolute; width: 900px; height: 520px; display:flex; align-items:center; justify-content:center; pointer-events:none; top:0; left:0;}
+    .overlay .box { pointer-events:auto; background: rgba(0,0,0,0.63); color: #fff; padding: 18px 22px; border-radius:10px; text-align:center; font-size:22px; }
+
+    @media (max-width:940px) {
+      header, #bottom-bar, #game-container { width: 100%; }
+      canvas { width: 100%; height: calc(100vw * 520 / 900); }
+      .overlay { left:0; right:0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="controls-left">
+      <div>
+        <h1 style="margin:0;font-size:18px;">Table Tennis (Custom)</h1>
+        <div class="small">(Left: Arrow Up/Down • Right: W/S when 2-player)</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label>Difficulty:</label>
+          <label><input type="radio" name="difficulty" value="easy" id="diffEasy"> Easy</label>
+          <label><input type="radio" name="difficulty" value="medium" id="diffMedium"> Medium</label>
+          <label><input type="radio" name="difficulty" value="hard" id="diffHard"> Hard</label>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label>Points to win:</label>
+          <input id="winScore" type="number" min="1" max="50" value="7" />
+        </div>
+      </div>
+    </div>
+
+    <div class="controls-right" aria-label="Game settings">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <!-- Sound controls -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label><input id="soundToggle" type="checkbox"> Enable sound</label>
+          <label class="small">Volume</label>
+          <input id="volume" type="range" min="0" max="100" value="70">
+        </div>
+
+        <!-- Ball speed -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label>Ball speed:</label>
+          <label><input name="ballSpeed" type="radio" value="slow"> Slow</label>
+          <label><input name="ballSpeed" type="radio" value="normal" checked> Normal</label>
+          <label><input name="ballSpeed" type="radio" value="fast"> Fast</label>
+        </div>
+
+        <!-- Power-ups / obstacles -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label><input id="powerToggle" type="checkbox"> Enable power-ups/obstacles</label>
+          <select id="powerMode" style="padding:6px;border-radius:6px;">
+            <option value="powerups">Power-ups</option>
+            <option value="obstacles">Obstacles</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+
+        <!-- Two-player -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label><input id="twoPlayer" type="checkbox"> Two-player mode (W / S)</label>
+        </div>
+
+        <!-- High score -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="small">High score (single): <span id="highSingle">—</span></div>
+          <div class="small">High score (2P): <span id="highTwo">—</span></div>
+          <button id="clearHigh">Clear</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div id="game-container">
+    <canvas id="game" width="900" height="520"></canvas>
+
+    <div class="overlay" id="overlay" style="display:none;">
+      <div class="box" id="overlayBox"></div>
+    </div>
+
+    <div id="info" style="margin-top:6px;color:#cfe8e0;">Controls: Arrow Up / Arrow Down. Press Space to pause. Click Serve or Restart as needed.</div>
+  </div>
+
+  <div id="bottom-bar">
+    <div class="score" id="score">Player: 0 &nbsp;&nbsp; Computer: 0</div>
+    <div style="display:flex;gap:8px;">
+      <button id="serveBtn">Serve</button>
+      <button id="restartBtn">Restart</button>
+    </div>
+  </div>
+
+  <script>
+  /*
+    Single-file Pong with:
+    - Sound (WebAudio), volume, enable toggle
+    - High score saved in localStorage (single & 2P)
+    - Ball speeds (slow/normal/fast) affecting future serves
+    - Power-ups and obstacles (simple implementation)
+    - Two-player mode (W/S for right paddle)
+    - Settings persisted in localStorage
+    Simple comments to help beginners understand.
+  */
+
+  // Canvas and sizes
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Table and visuals
+  const TABLE_GREEN = '#0f7a34';
+  const PADDLE_BEIGE = '#f5f5dc';
+  const BALL_WHITE = '#ffffff';
+
+  // Paddles
+  const PADDLE_WIDTH = 12;
+  const PADDLE_HEIGHT = 110;
+  const PADDLE_MARGIN = 20;
+
+  const player = { x: PADDLE_MARGIN, y: (H - PADDLE_HEIGHT)/2, w: PADDLE_WIDTH, h: PADDLE_HEIGHT, speed: 7 };
+  const computer = { x: W - PADDLE_MARGIN - PADDLE_WIDTH, y: (H - PADDLE_HEIGHT)/2, w: PADDLE_WIDTH, h: PADDLE_HEIGHT, speed: 5, aiFactorOnSide: 1.0 };
+
+  // Ball
+  const ball = { x: W/2, y: H/2, r: 9, speed: 5, vx: 0, vy: 0, stuck: true };
+
+  // Power-ups & obstacles
+  let powerups = [];   // {x,y,r,type}
+  let obstacles = [];  // {x,y,w,h}
+  const POWER_RADIUS = 12;
+
+  // Game state
+  let scorePlayer = 0, scoreComputer = 0;
+  let paused = false, gameOver = false;
+  let winTarget = parseInt(document.getElementById('winScore').value, 10) || 7;
+  let lastPaddleHit = null; // 'player' or 'computer' - used for assigning power-ups
+  let rallies = 0; // count of scoring events this match, used for high-score metric
+
+  // Controls state
+  const keys = { ArrowUp: false, ArrowDown: false, KeyW: false, KeyS: false };
+
+  // Default settings (will be loaded/saved to localStorage)
+  const defaultSettings = {
+    difficulty: 'medium',
+    winScore: 7,
+    soundEnabled: true,
+    volume: 70,
+    ballSpeed: 'normal', // slow / normal / fast
+    powerToggle: false,
+    powerMode: 'powerups', // powerups / obstacles / both
+    twoPlayer: false
+  };
+
+  let settings = loadSettings();
+
+  // WebAudio for simple SFX
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
+  function playSound(type) {
+    if (!settings.soundEnabled) return;
+    ensureAudio();
+    // Some browsers require resume() after user gesture
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+    const vol = (settings.volume || 70) / 100;
+    // Simple synthesized blips
+    const now = audioCtx.currentTime;
+    if (type === 'paddle') {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(700, now);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.12 * vol, now + 0.01);
+      g.gain.linearRampToValueAtTime(0.0001, now + 0.09);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.1);
+    } else if (type === 'score') {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(260, now);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.16 * vol, now + 0.01);
+      g.gain.linearRampToValueAtTime(0.0001, now + 0.28);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now); o.frequency.linearRampToValueAtTime(660, now + 0.18);
+      o.stop(now + 0.28);
+    } else if (type === 'power') {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(480, now);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.12 * vol, now + 0.01);
+      g.gain.linearRampToValueAtTime(0.0001, now + 0.14);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.14);
+    }
+  }
+
+  // Difficulty mapping
+  const difficulties = {
+    easy: { aiSpeed: 3.2, ballSpeed: 4.2, aiFactorOnSide: 0.8 },
+    medium: { aiSpeed: 5.0, ballSpeed: 5.0, aiFactorOnSide: 1.0 },
+    hard: { aiSpeed: 7.2, ballSpeed: 5.6, aiFactorOnSide: 1.2 }
+  };
+
+  // High score storage: we'll store minimal rallies to win for each mode (lower is better)
+  function getHighScores() {
+    try {
+      const raw = localStorage.getItem('pongHighScores_v1');
+      if (!raw) return { single: null, two: null };
+      return JSON.parse(raw);
+    } catch (e) { return { single: null, two: null }; }
+  }
+  function saveHighScores(obj) {
+    localStorage.setItem('pongHighScores_v1', JSON.stringify(obj));
+  }
+
+  function updateHighScoreDisplay() {
+    const hs = getHighScores();
+    document.getElementById('highSingle').textContent = hs.single ? (`${hs.single.rallies} rallies (${hs.single.winTarget} pts)`) : '—';
+    document.getElementById('highTwo').textContent = hs.two ? (`${hs.two.rallies} rallies (${hs.two.winTarget} pts)`) : '—';
+  }
+
+  // Save/load settings so user preferences persist
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem('pongSettings_v1');
+      if (!raw) {
+        localStorage.setItem('pongSettings_v1', JSON.stringify(defaultSettings));
+        return Object.assign({}, defaultSettings);
+      }
+      const parsed = JSON.parse(raw);
+      return Object.assign({}, defaultSettings, parsed);
+    } catch(e) {
+      return Object.assign({}, defaultSettings);
+    }
+  }
+  function saveSettings() {
+    localStorage.setItem('pongSettings_v1', JSON.stringify(settings));
+  }
+
+  // Apply settings to UI controls and internal values
+  function applySettingsToUI() {
+    // difficulty radios
+    document.getElementById('diffEasy').checked = settings.difficulty === 'easy';
+    document.getElementById('diffMedium').checked = settings.difficulty === 'medium';
+    document.getElementById('diffHard').checked = settings.difficulty === 'hard';
+    document.getElementById('winScore').value = settings.winScore;
+    // sound
+    document.getElementById('soundToggle').checked = settings.soundEnabled;
+    document.getElementById('volume').value = settings.volume;
+    // ball speed
+    const bs = settings.ballSpeed || 'normal';
+    for (const r of document.getElementsByName('ballSpeed')) {
+      r.checked = (r.value === bs);
+    }
+    // powers and mode
+    document.getElementById('powerToggle').checked = !!settings.powerToggle;
+    document.getElementById('powerMode').value = settings.powerMode || 'powerups';
+    document.getElementById('twoPlayer').checked = !!settings.twoPlayer;
+    // difficulty effect
+    applyDifficulty(settings.difficulty);
+    // update high score display
+    updateHighScoreDisplay();
+  }
+
+  function applyDifficulty(name) {
+    const d = difficulties[name] || difficulties.medium;
+    computer.speed = d.aiSpeed;
+    computer.aiFactorOnSide = d.aiFactorOnSide;
+    // ball.baseSpeed used when serving
+    ball.baseSpeed = d.ballSpeed;
+  }
+
+  // Reset ball and serve toward toRight
+  function resetBall(toRight = true) {
+    if (gameOver) return;
+    ball.x = W/2; ball.y = H/2;
+    ball.speed = (ball.baseSpeed !== undefined) ? ball.baseSpeed : 5;
+    ball.stuck = false;
+    const angle = (Math.random()*2 - 1) * (Math.PI/6); // -30..30deg
+    ball.vx = (toRight ? 1 : -1) * ball.speed * Math.cos(angle);
+    ball.vy = ball.speed * Math.sin(angle);
+  }
+
+  function serveImmediate() {
+    if (gameOver) return;
+    resetBall(Math.random() > 0.35);
+  }
+
+  // Restart game
+  function restartGame() {
+    scorePlayer = 0; scoreComputer = 0;
+    updateScoreText();
+    player.y = (H - PADDLE_HEIGHT)/2;
+    computer.y = (H - PADDLE_HEIGHT)/2;
+    ball.x = W/2; ball.y = H/2; ball.stuck = true;
+    gameOver = false; paused = false;
+    rallies = 0;
+    powerups = []; obstacles = [];
+    hideOverlay();
+    applyDifficulty(settings.difficulty);
+    // if obstacles/powerups enabled, (re)create obstacles
+    if (settings.powerToggle && (settings.powerMode === 'obstacles' || settings.powerMode === 'both')) createObstacles();
+    // schedule initial serve
+    setTimeout(()=>resetBall(Math.random()>0.5), 700);
+  }
+
+  // Update scoreboard display at bottom
+  function updateScoreText() {
+    document.getElementById('score').textContent = `Player: ${scorePlayer}   Computer: ${scoreComputer}`;
+  }
+
+  // Create static obstacles (simple fixed positions)
+  function createObstacles() {
+    obstacles = [];
+    // Add two small boxes around center left and center right but not on paddles
+    const w = 18, h = 80;
+    obstacles.push({ x: W*0.35 - w/2, y: H/2 - h/2, w: w, h: h });
+    obstacles.push({ x: W*0.65 - w/2, y: H/2 - h/2, w: w, h: h });
+  }
+
+  // Spawn power-ups occasionally (if enabled)
+  let lastPowerSpawn = 0;
+  function maybeSpawnPowerup(t) {
+    if (!settings.powerToggle) return;
+    if (settings.powerMode === 'obstacles') return;
+    const now = t || Date.now();
+    // spawn every 7-12 seconds roughly
+    if (now - lastPowerSpawn < 7000) return;
+    const freq = 7000 + Math.random()*5000;
+    if (now - lastPowerSpawn < freq) return;
+    lastPowerSpawn = now;
+    // place power-up somewhere near center but not overlapping paddles
+    const x = W*0.25 + Math.random()*W*0.5;
+    const y = 40 + Math.random()*(H-80);
+    // pick random type
+    const types = ['slowBall','bigPaddle','extraPoint'];
+    const type = types[Math.floor(Math.random()*types.length)];
+    powerups.push({ x, y, r: POWER_RADIUS, type, created: now });
+  }
+
+  // Apply a power-up effect to the given target ('player' or 'computer')
+  function applyPowerupTo(target, type) {
+    playSound('power');
+    if (type === 'slowBall') {
+      // slow ball for 4 seconds: multiply speed by 0.7
+      const originalSpeed = ball.speed;
+      ball.speed *= 0.7;
+      // scale velocities proportionally
+      const sp = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+      if (sp > 0) {
+        ball.vx = (ball.vx / sp) * ball.speed;
+        ball.vy = (ball.vy / sp) * ball.speed;
+      }
+      setTimeout(()=>{
+        // restore speed (keep current direction)
+        ball.speed = Math.max(ball.baseSpeed || 5, originalSpeed);
+      }, 4000);
+    } else if (type === 'bigPaddle') {
+      // enlarge target's paddle for 6 seconds
+      const p = (target === 'player') ? player : computer;
+      const oldH = p.h;
+      p.h = Math.min(H*0.9, p.h * 1.5);
+      // ensure inside bounds
+      if (p.y + p.h > H) p.y = H - p.h;
+      setTimeout(()=>{ p.h = oldH; if (p.y + p.h > H) p.y = H - p.h; }, 6000);
+    } else if (type === 'extraPoint') {
+      if (target === 'player') {
+        scorePlayer += 1;
+        updateScoreText();
+        // check win
+        if (scorePlayer >= winTarget) onGameOver('You win! 🎉');
+      } else {
+        scoreComputer += 1;
+        updateScoreText();
+        if (scoreComputer >= winTarget) onGameOver('Computer wins!');
+      }
+    }
+  }
+
+  // Utility: rectangle-circle collision
+  function rectCircleColliding(px, py, pw, ph, cx, cy, cr) {
+    const closestX = Math.max(px, Math.min(cx, px + pw));
+    const closestY = Math.max(py, Math.min(cy, py + ph));
+    const dx = cx - closestX, dy = cy - closestY;
+    return (dx*dx + dy*dy) <= cr*cr;
+  }
+
+  // Utility: circle-circle collision
+  function circleCollide(x1,y1,r1,x2,y2,r2) {
+    const dx = x1-x2, dy = y1-y2;
+    return (dx*dx + dy*dy) <= (r1+r2)*(r1+r2);
+  }
+
+  // Main update loop
+  function update(time) {
+    if (paused || gameOver) return;
+
+    // Player paddle input
+    if (keys.ArrowUp && !keys.ArrowDown) player.y -= player.speed;
+    else if (keys.ArrowDown && !keys.ArrowUp) player.y += player.speed;
+    // 2-player right paddle input (W/S) or AI
+    if (settings.twoPlayer) {
+      if (keys.KeyW && !keys.KeyS) computer.y -= computer.speed;
+      else if (keys.KeyS && !keys.KeyW) computer.y += computer.speed;
+    } else {
+      // AI movement following ball
+      const paddleCenter = computer.y + computer.h/2;
+      const diff = ball.y - paddleCenter;
+      const onAISide = ball.x > W/2;
+      const aiFactor = onAISide ? (computer.aiFactorOnSide || 1.0) : 0.65;
+      const maxMove = computer.speed * aiFactor;
+      if (Math.abs(diff) > 6) computer.y += Math.sign(diff) * Math.min(maxMove, Math.abs(diff));
+    }
+
+    // Keep paddles inside
+    if (player.y < 0) player.y = 0;
+    if (player.y + player.h > H) player.y = H - player.h;
+    if (computer.y < 0) computer.y = 0;
+    if (computer.y + computer.h > H) computer.y = H - computer.h;
+
+    // Spawn powerups occasionally
+    if (settings.powerToggle && (settings.powerMode === 'powerups' || settings.powerMode === 'both')) {
+      maybeSpawnPowerup(Date.now());
+    }
+
+    // Ball movement
+    if (!ball.stuck) {
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // top/bottom bounce
+      if (ball.y - ball.r < 0) { ball.y = ball.r; ball.vy = -ball.vy; }
+      else if (ball.y + ball.r > H) { ball.y = H - ball.r; ball.vy = -ball.vy; }
+
+      // Paddle collisions
+      if (rectCircleColliding(player.x, player.y, player.w, player.h, ball.x, ball.y, ball.r)) {
+        // place outside
+        ball.x = player.x + player.w + ball.r;
+        // compute bounce angle based on hit position
+        const rel = (ball.y - (player.y + player.h/2)) / (player.h/2);
+        const maxBounce = Math.PI/3;
+        const angle = rel * maxBounce;
+        const dir = 1;
+        ball.speed *= 1.03; // slight speedup
+        ball.vx = dir * ball.speed * Math.cos(angle);
+        ball.vy = ball.speed * Math.sin(angle);
+        lastPaddleHit = 'player';
+        playSound('paddle');
+      }
+
+      if (rectCircleColliding(computer.x, computer.y, computer.w, computer.h, ball.x, ball.y, ball.r)) {
+        ball.x = computer.x - ball.r;
+        const rel = (ball.y - (computer.y + computer.h/2)) / (computer.h/2);
+        const maxBounce = Math.PI/3;
+        const angle = rel * maxBounce;
+        const dir = -1;
+        ball.speed *= 1.03;
+        ball.vx = dir * ball.speed * Math.cos(angle);
+        ball.vy = ball.speed * Math.sin(angle);
+        lastPaddleHit = settings.twoPlayer ? 'computer' : 'computer'; // consistent naming
+        playSound('paddle');
+      }
+
+      // Obstacles bounce (simple AABB vs circle handling)
+      if (settings.powerToggle && (settings.powerMode === 'obstacles' || settings.powerMode === 'both')) {
+        obstacles.forEach(o => {
+          // treat obstacle as rect; if collision, reflect ball depending on side of collision
+          if (rectCircleColliding(o.x, o.y, o.w, o.h, ball.x, ball.y, ball.r)) {
+            // Determine penetration direction
+            const cx = ball.x, cy = ball.y;
+            const closestX = Math.max(o.x, Math.min(cx, o.x + o.w));
+            const closestY = Math.max(o.y, Math.min(cy, o.y + o.h));
+            const dx = cx - closestX, dy = cy - closestY;
+            // reflect depending on larger penetration axis
+            if (Math.abs(dx) > Math.abs(dy)) {
+              ball.vx = -ball.vx;
+              ball.x += Math.sign(dx) * (ball.r + 1);
+            } else {
+              ball.vy = -ball.vy;
+              ball.y += Math.sign(dy) * (ball.r + 1);
+            }
+          }
+        });
+      }
+
+      // Power-ups collision: if ball intersects powerup, apply to last paddle that hit the ball
+      for (let i = powerups.length - 1; i >= 0; i--) {
+        const p = powerups[i];
+        if (circleCollide(ball.x, ball.y, ball.r, p.x, p.y, p.r)) {
+          // assign to lastPaddleHit, fallback to player if null
+          const target = lastPaddleHit || 'player';
+          applyPowerupTo(target, p.type);
+          powerups.splice(i,1);
+        } else {
+          // remove if too old (>12s)
+          if (Date.now() - p.created > 12000) powerups.splice(i,1);
+        }
+      }
+
+      // Scoring: if ball crosses left or right edge
+      if (ball.x - ball.r < 0) {
+        // Computer scores
+        scoreComputer += 1;
+        updateScoreText();
+        playSound('score');
+        rallies += 1;
+        ball.stuck = true;
+        ball.x = W/2; ball.y = H/2;
+        lastPaddleHit = null;
+        // check win
+        if (scoreComputer >= winTarget) {
+          onGameOver('Computer wins!');
+        } else {
+          setTimeout(()=>resetBall(true), 500);
+        }
+      } else if (ball.x + ball.r > W) {
+        // Player scores
+        scorePlayer += 1;
+        updateScoreText();
+        playSound('score');
+        rallies += 1;
+        ball.stuck = true;
+        ball.x = W/2; ball.y = H/2;
+        lastPaddleHit = null;
+        if (scorePlayer >= winTarget) {
+          onGameOver('You win! 🎉');
+        } else {
+          setTimeout(()=>resetBall(false), 500);
+        }
+      }
+
+      // Cap ball speed
+      const maxSpeed = 16;
+      const currentSpeed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+      if (currentSpeed > maxSpeed) {
+        ball.vx = (ball.vx / currentSpeed) * maxSpeed;
+        ball.vy = (ball.vy / currentSpeed) * maxSpeed;
+      }
+    } else {
+      // Keep ball near center / player's paddle while waiting to serve
+      ball.x = W/2;
+      ball.y = Math.max(player.y + player.h/2, Math.min(H - ball.r, Math.max(ball.r, ball.y)));
+    }
+  }
+
+  // End of match: check and update high score
+  function onGameOver(text) {
+    gameOver = true;
+    ball.stuck = true;
+    showOverlay(text + ' Click Restart to play again.');
+    // Determine mode (single vs two)
+    const mode = settings.twoPlayer ? 'two' : 'single';
+    const hs = getHighScores();
+    const existing = (mode === 'single') ? hs.single : hs.two;
+    // We'll use 'rallies' as metric (lower is better). Save if new is better or no existing.
+    const record = { rallies: rallies || (winTarget), winTarget: winTarget, date: new Date().toISOString() };
+    if (!existing || (record.rallies < existing.rallies)) {
+      if (mode === 'single') hs.single = record; else hs.two = record;
+      saveHighScores(hs);
+      updateHighScoreDisplay();
+    }
+  }
+
+  // Draw the scene
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+
+    // Table green background
+    ctx.fillStyle = TABLE_GREEN;
+    ctx.fillRect(0,0,W,H);
+
+    // subtle border
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(2,2,W-4,H-4);
+
+    // center dashed line
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10,14]);
+    ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // obstacles
+    if (settings.powerToggle && (settings.powerMode === 'obstacles' || settings.powerMode === 'both')) {
+      ctx.fillStyle = 'rgba(30,30,30,0.6)';
+      obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
+    }
+
+    // paddles (beige)
+    ctx.fillStyle = PADDLE_BEIGE;
+    roundRect(ctx, player.x, player.y, player.w, player.h, 6, true, false);
+    roundRect(ctx, computer.x, computer.y, computer.w, computer.h, 6, true, false);
+
+    // ball (white)
+    ctx.fillStyle = BALL_WHITE;
+    circle(ctx, ball.x, ball.y, ball.r);
+
+    // powerups display
+    powerups.forEach(p => {
+      if (p.type === 'slowBall') ctx.fillStyle = 'rgba(0,120,255,0.95)';
+      else if (p.type === 'bigPaddle') ctx.fillStyle = 'rgba(255,180,0,0.95)';
+      else ctx.fillStyle = 'rgba(120,255,80,0.95)';
+      circle(ctx, p.x, p.y, p.r);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = '10px Arial';
+      ctx.textAlign = 'center';
+      const label = (p.type === 'slowBall') ? 'S' : (p.type === 'bigPaddle') ? 'P' : '+1';
+      ctx.fillText(label, p.x, p.y + 3);
+      ctx.textAlign = 'start';
+    });
+
+    // HUD text
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = '12px Arial';
+    ctx.fillText('Left: you (Arrow Up/Down)', 16, 18);
+    ctx.fillText(settings.twoPlayer ? 'Right: player 2 (W/S)' : 'Right: computer', W - 200, 18);
+
+    // Pause overlay
+    if (paused && !gameOver) {
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#fff';
+      ctx.font = '28px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('PAUSED', W/2, H/2);
+      ctx.textAlign = 'start';
+    }
+  }
+
+  // Utility drawing functions
+  function circle(ctx,x,y,r){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); }
+  function roundRect(ctx,x,y,w,h,r,fill,stroke){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  // Overlay helpers
+  function showOverlay(text) {
+    const overlay = document.getElementById('overlay');
+    const box = document.getElementById('overlayBox');
+    box.textContent = text;
+    overlay.style.display = 'flex';
+  }
+  function hideOverlay() {
+    document.getElementById('overlay').style.display = 'none';
+  }
+
+  // Input handlers
+  window.addEventListener('keydown', (e)=>{
+    if (e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'KeyW' || e.code === 'KeyS') {
+      keys[e.code] = true;
+      // ensure audio context is resumed on user gesture
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+      e.preventDefault();
+    } else if (e.code === 'Space') {
+      paused = !paused;
+      e.preventDefault();
+    }
+  });
+  window.addEventListener('keyup', (e)=>{
+    if (e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'KeyW' || e.code === 'KeyS') {
+      keys[e.code] = false; e.preventDefault();
+    }
+  });
+
+  // UI wiring
+  document.getElementById('serveBtn').addEventListener('click', ()=>{ serveImmediate(); });
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    // read settings first
+    readSettingsFromUI();
+    saveSettings();
+    restartGame();
+  });
+
+  // difficulty radios
+  document.getElementById('diffEasy').addEventListener('change', ()=>{ settings.difficulty = 'easy'; applyDifficulty('easy'); saveSettings(); });
+  document.getElementById('diffMedium').addEventListener('change', ()=>{ settings.difficulty = 'medium'; applyDifficulty('medium'); saveSettings(); });
+  document.getElementById('diffHard').addEventListener('change', ()=>{ settings.difficulty = 'hard'; applyDifficulty('hard'); saveSettings(); });
+
+  // win score
+  document.getElementById('winScore').addEventListener('change', (e)=>{ settings.winScore = parseInt(e.target.value,10) || 7; winTarget = settings.winScore; saveSettings(); });
+
+  // sound controls
+  document.getElementById('soundToggle').addEventListener('change', (e)=>{ settings.soundEnabled = e.target.checked; if (settings.soundEnabled) ensureAudio(); saveSettings(); });
+  document.getElementById('volume').addEventListener('input', (e)=>{ settings.volume = parseInt(e.target.value,10); saveSettings(); });
+
+  // ball speed radios
+  const bsRadios = document.getElementsByName('ballSpeed');
+  for (const r of bsRadios) {
+    r.addEventListener('change', (e)=>{
+      if (e.target.checked) {
+        settings.ballSpeed = e.target.value;
+        // map to base speed
+        if (settings.ballSpeed === 'slow') ball.baseSpeed = 3.5;
+        else if (settings.ballSpeed === 'normal') ball.baseSpeed = 5;
+        else if (settings.ballSpeed === 'fast') ball.baseSpeed = 7;
+        saveSettings();
+      }
+    });
+  }
+
+  // power-ups toggle and mode
+  document.getElementById('powerToggle').addEventListener('change', (e)=>{
+    settings.powerToggle = e.target.checked;
+    // create obstacles if needed
+    if (settings.powerToggle && (settings.powerMode === 'obstacles' || settings.powerMode === 'both')) createObstacles();
+    else obstacles = [];
+    saveSettings();
+  });
+  document.getElementById('powerMode').addEventListener('change', (e)=>{
+    settings.powerMode = e.target.value;
+    if (settings.powerToggle && (settings.powerMode === 'obstacles' || settings.powerMode === 'both')) createObstacles();
+    else obstacles = [];
+    saveSettings();
+  });
+
+  // two-player toggle
+  document.getElementById('twoPlayer').addEventListener('change', (e)=>{
+    settings.twoPlayer = e.target.checked;
+    saveSettings();
+  });
+
+  // clear high scores button
+  document.getElementById('clearHigh').addEventListener('click', ()=>{
+    localStorage.removeItem('pongHighScores_v1');
+    updateHighScoreDisplay();
+  });
+
+  // read UI to settings (useful when restarting)
+  function readSettingsFromUI() {
+    // difficulty
+    settings.difficulty = document.getElementById('diffEasy').checked ? 'easy' : (document.getElementById('diffHard').checked ? 'hard' : 'medium');
+    settings.winScore = parseInt(document.getElementById('winScore').value,10) || 7;
+    settings.soundEnabled = document.getElementById('soundToggle').checked;
+    settings.volume = parseInt(document.getElementById('volume').value,10);
+    for (const r of document.getElementsByName('ballSpeed')) if (r.checked) settings.ballSpeed = r.value;
+    settings.powerToggle = document.getElementById('powerToggle').checked;
+    settings.powerMode = document.getElementById('powerMode').value;
+    settings.twoPlayer = document.getElementById('twoPlayer').checked;
+    // apply derived settings
+    if (settings.ballSpeed === 'slow') ball.baseSpeed = 3.5;
+    else if (settings.ballSpeed === 'normal') ball.baseSpeed = 5;
+    else if (settings.ballSpeed === 'fast') ball.baseSpeed = 7;
+    applyDifficulty(settings.difficulty);
+    winTarget = settings.winScore;
+  }
+
+  // Animation loop
+  function loop(ts) {
+    update(ts);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Initialize from saved settings and start
+  function init() {
+    // set UI from loaded settings
+    applySettingsToUI();
+    // apply ball speed to baseSpeed
+    if (settings.ballSpeed === 'slow') ball.baseSpeed = 3.5;
+    else if (settings.ballSpeed === 'normal') ball.baseSpeed = 5;
+    else if (settings.ballSpeed === 'fast') ball.baseSpeed = 7;
+    // start match
+    winTarget = settings.winScore;
+    if (settings.powerToggle && (settings.powerMode === 'obstacles' || settings.powerMode === 'both')) createObstacles();
+    updateScoreText();
+    // initial serve after brief pause
+    setTimeout(()=>resetBall(Math.random() > 0.5), 800);
+    requestAnimationFrame(loop);
+  }
+
+  // Start UI wiring for initial values: ensure event listeners read current settings on load
+  // (some listeners already set above)
+  // load high score display
+  updateHighScoreDisplay();
+
+  // Ensure first audio context creation happens after a user gesture; but we still create when needed
+  // Start the game
+  init();
+
+  </script>
+</body>
+</html>

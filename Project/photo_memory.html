@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Enhanced Photo Frame Composer — Single File</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{
+    --bg:#f3f7fb;
+    --panel:#fff;
+    --accent:#1e40af;
+    --muted:#6b7280;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:18px;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    background:linear-gradient(180deg,var(--bg),#eef6ff);
+    color:#0f172a;
+    display:flex;
+    justify-content:center;
+  }
+  .app{
+    width:1120px;
+    max-width:96%;
+    background:var(--panel);
+    border-radius:12px;
+    padding:16px;
+    box-shadow:0 12px 30px rgba(2,6,23,0.06);
+  }
+  h1{margin:0 0 6px;font-size:20px}
+  p.lead{margin:0 0 12px;color:var(--muted);font-size:13px}
+  .layout{display:grid;grid-template-columns:1fr 420px;gap:16px}
+  .controls{padding:12px;border-radius:10px;background:linear-gradient(180deg,#fff,#fbfdff);border:1px solid #e6eefc}
+  label{display:block;font-size:13px;margin-bottom:6px;color:#0f172a}
+  .row{margin-bottom:12px}
+  input[type="number"], input[type="text"], select, input[type="range"], input[type="color"]{
+    width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e6eefc;background:#fff;font-size:13px;
+  }
+  .small{font-size:12px;color:var(--muted)}
+  .slots{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+  .slot{width:calc(33.333% - 6.6px);min-width:110px;background:#f8fbff;padding:8px;border-radius:8px;text-align:center;border:1px dashed transparent}
+  .thumb{height:86px;border-radius:8px;overflow:hidden;background:linear-gradient(180deg,#eef6ff,#fff);display:flex;align-items:center;justify-content:center;margin-bottom:8px;border:1px solid rgba(2,6,23,0.03)}
+  .thumb img{max-width:100%;max-height:100%;display:block}
+  .slot .controls{display:flex;gap:6px;justify-content:center}
+  button, .btn{cursor:pointer}
+  .btn-primary{padding:10px 14px;border-radius:10px;border:0;background:linear-gradient(180deg,var(--accent),#13307a);color:#fff;font-weight:700}
+  .btn-ghost{padding:9px 12px;border-radius:10px;border:1px solid #e6eefc;background:#fff;color:var(--accent);font-weight:600}
+  .preview{padding:12px;border-radius:10px;background:linear-gradient(180deg,#fbfdff,#ffffff);border:1px solid #e6eefc;display:flex;flex-direction:column;gap:12px}
+  .canvas-wrap{background:linear-gradient(180deg,#f1f7ff,#ffffff);border-radius:8px;padding:8px;display:flex;justify-content:center;align-items:center}
+  canvas{width:100%;height:auto;border-radius:6px;max-width:100%}
+  .meta{font-size:13px;color:var(--muted)}
+  footer{margin-top:12px;font-size:12px;color:var(--muted);text-align:center}
+  .flex{display:flex;gap:8px;align-items:center}
+  .settings{margin-top:8px;padding:8px;border-radius:8px;background:#fff;border:1px solid #f0f6ff}
+  @media (max-width:1000px){
+    .layout{grid-template-columns:1fr}
+    .slot{width:calc(50% - 6px)}
+  }
+  @media (max-width:520px){
+    .slot{width:100%}
+  }
+</style>
+</head>
+<body>
+<div class="app" role="application" aria-label="Enhanced Photo Frame Composer">
+  <h1>Enhanced Photo Frame Composer</h1>
+  <p class="lead">Create framed collages with procedurally generated backgrounds and decorative frames — all in one offline HTML file.</p>
+
+  <div class="layout">
+    <!-- Controls & Uploads -->
+    <div class="controls" id="controls">
+      <div class="row">
+        <label for="num">Number of images <span class="small">(1–9)</span></label>
+        <input id="num" type="number" min="1" max="9" value="4" placeholder="Enter a number 1–9" aria-label="Number of images" />
+      </div>
+
+      <div class="row">
+        <label for="theme">Theme</label>
+        <select id="theme" aria-label="Theme">
+          <option value="scenic">Scenic</option>
+          <option value="mountains">Mountains</option>
+          <option value="funny">Funny</option>
+          <option value="floral">Floral</option>
+          <option value="random">Random (vacation variations)</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label for="style">Frame style</label>
+        <select id="style" aria-label="Frame style">
+          <option value="classic">Classic</option>
+          <option value="polaroid">Polaroid</option>
+          <option value="circle">Circle</option>
+          <option value="ornate">Ornate</option>
+          <option value="torn">Torn-paper</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label for="spacing">Spacing / scale <span id="spacingVal" class="small">0.12</span></label>
+        <input id="spacing" type="range" min="0.06" max="0.25" step="0.01" value="0.12" aria-label="Spacing" />
+      </div>
+
+      <div class="row">
+        <label for="title">Title (optional)</label>
+        <input id="title" type="text" placeholder="Enter a title for the composition" aria-label="Composition title" />
+      </div>
+
+      <!-- Enhanced frame controls -->
+      <div class="settings" aria-label="Frame settings">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <div style="flex:1">
+            <label for="borderWidth">Border thickness</label>
+            <input id="borderWidth" type="range" min="0" max="40" step="1" value="8" />
+          </div>
+          <div style="width:84px">
+            <label for="borderColor">Border color</label>
+            <input id="borderColor" type="color" value="#ffffff" />
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <div style="flex:1">
+            <label for="radius">Corner radius</label>
+            <input id="radius" type="range" min="0" max="60" step="1" value="12" />
+          </div>
+          <div style="width:140px">
+            <label for="shadowToggle" class="small">Drop shadow</label>
+            <div class="flex">
+              <input id="shadowToggle" type="checkbox" checked />
+              <label for="shadowToggle" class="small">Enable</label>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="flex:1">
+            <label for="shadowBlur">Shadow intensity</label>
+            <input id="shadowBlur" type="range" min="0" max="40" step="1" value="12" />
+          </div>
+          <div style="width:140px">
+            <label for="rotationToggle" class="small">Per-image rotation</label>
+            <div class="flex">
+              <input id="rotationToggle" type="checkbox" checked />
+              <label for="rotationToggle" class="small">Enable</label>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <div class="flex" style="align-items:center">
+            <input id="polaroidCaption" type="checkbox" />
+            <label for="polaroidCaption" class="small" style="margin-left:6px">Polaroid caption uses title</label>
+          </div>
+          <div style="flex:1"></div>
+          <button id="shuffleBg" class="btn-ghost" title="Pick new random background">Shuffle background</button>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;font-size:13px;color:var(--muted)">Upload images below (drag-and-drop supported). Slots reflect Number above.</div>
+
+      <div class="slots" id="slots" aria-live="polite"></div>
+
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+        <button id="generate" class="btn-primary">Generate</button>
+        <button id="download" class="btn-ghost" disabled>Download PNG</button>
+        <button id="reset" class="btn-ghost">Reset</button>
+        <div style="flex:1"></div>
+        <div id="status" class="small">No composition yet</div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview" aria-live="polite">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:700">Preview</div>
+        <div class="meta">Export size: 1400 × 900</div>
+      </div>
+
+      <div class="canvas-wrap" role="img" aria-label="Composition preview">
+        <canvas id="canvas" width="1400" height="900"></canvas>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="meta">Theme: <span id="metaTheme">scenic</span> • Style: <span id="metaStyle">classic</span></div>
+        <div class="meta">Uploaded: <span id="metaCount">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>All assets generated procedurally — offline single-file app</footer>
+</div>
+
+<script>
+/* Enhanced Photo Frame Composer
+   - Single-file app: no external resources
+   - Key features: dynamic upload slots, procedural backgrounds, multiple frame styles,
+     adjustable borders, corner radius, shadows, polaroid captions, torn/ornate effects,
+     shuffle/reset, download PNG.
+*/
+
+/* ---------- DOM references ---------- */
+const numInput = document.getElementById('num');
+const themeSelect = document.getElementById('theme');
+const styleSelect = document.getElementById('style');
+const spacingInput = document.getElementById('spacing');
+const spacingVal = document.getElementById('spacingVal');
+const titleInput = document.getElementById('title');
+
+const borderWidthInput = document.getElementById('borderWidth');
+const borderColorInput = document.getElementById('borderColor');
+const radiusInput = document.getElementById('radius');
+const shadowToggle = document.getElementById('shadowToggle');
+const shadowBlurInput = document.getElementById('shadowBlur');
+const rotationToggle = document.getElementById('rotationToggle');
+const polaroidCaption = document.getElementById('polaroidCaption');
+
+const slotsEl = document.getElementById('slots');
+const generateBtn = document.getElementById('generate');
+const downloadBtn = document.getElementById('download');
+const resetBtn = document.getElementById('reset');
+const shuffleBgBtn = document.getElementById('shuffleBg');
+const statusEl = document.getElementById('status');
+
+const metaTheme = document.getElementById('metaTheme');
+const metaStyle = document.getElementById('metaStyle');
+const metaCount = document.getElementById('metaCount');
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let slots = []; // {file, dataURL}
+let lastCompositionDataURL = null;
+let lastBgIndex = null; // to support shuffle
+
+/* ---------- Utilities ---------- */
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+/* ---------- Slot creation & drag/drop ---------- */
+// Create upload slots according to number
+function createSlots(count){
+  slots = [];
+  slotsEl.innerHTML = '';
+  count = clamp(parseInt(count)||1,1,9);
+  for(let i=0;i<count;i++){
+    const div = document.createElement('div');
+    div.className = 'slot';
+    div.innerHTML = `
+      <div class="thumb" data-i="${i}">
+        <span style="color:#94a3b8;font-size:13px">No image</span>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:center;align-items:center">
+        <label class="btn-upload" style="cursor:pointer;padding:8px 10px;border-radius:8px;background:#1e40af;color:#fff">Upload</label>
+        <button class="clear" style="padding:8px 10px;border-radius:8px;border:0;background:#ef4444;color:#fff">Clear</button>
+      </div>
+      <input type="file" accept="image/*" style="display:none" />
+    `;
+    const input = div.querySelector('input[type=file]');
+    const uploadLabel = div.querySelector('.btn-upload');
+    const clearBtn = div.querySelector('.clear');
+    const thumb = div.querySelector('.thumb');
+
+    uploadLabel.addEventListener('click', ()=> input.click());
+    input.addEventListener('change', e=> {
+      const f = input.files && input.files[0];
+      if(!f) return;
+      readFileToSlot(i, f, thumb, div);
+    });
+
+    // drag & drop support
+    div.addEventListener('dragover', (ev)=>{ ev.preventDefault(); div.style.outline='2px dashed #93c5fd'; });
+    div.addEventListener('dragleave', (ev)=>{ div.style.outline='none'; });
+    div.addEventListener('drop', (ev)=> {
+      ev.preventDefault(); div.style.outline='none';
+      const f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+      if(f) readFileToSlot(i, f, thumb, div);
+    });
+
+    clearBtn.addEventListener('click', ()=>{
+      input.value=''; thumb.innerHTML = '<span style="color:#94a3b8;font-size:13px">No image</span>';
+      slots[i] = null; updateMeta();
+    });
+
+    slotsEl.appendChild(div);
+    slots.push(null);
+  }
+  updateMeta();
+}
+
+// Read file with FileReader and set slot preview
+function readFileToSlot(index, file, thumbEl){
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const url = ev.target.result;
+    thumbEl.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = url;
+    thumbEl.appendChild(img);
+    slots[index] = {file, dataURL: url};
+    updateMeta();
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ---------- Background generation ---------- */
+/* Return data URI for a named theme or a vacation variation index.
+   No external images used - SVGs are generated programmatically.
+*/
+function backgroundDataURI(theme, variationIdx=null){
+  const w = canvas.width, h = canvas.height;
+  if(theme === 'scenic'){
+    const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
+        <defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#87CEEB'/><stop offset='1' stop-color='#eaf5ff'/></linearGradient></defs>
+        <rect width='100%' height='100%' fill='url(#g)'/>
+        <g fill='#cfe9ff'><ellipse cx='280' cy='${h-120}' rx='420' ry='130'/><ellipse cx='960' cy='${h-80}' rx='520' ry='150'/></g>
+        <g fill='#6aa8ff'><path d='M120 ${h-120} L300 ${h-340} L480 ${h-120} Z' opacity='0.95'/><path d='M540 ${h-120} L760 ${h-360} L1020 ${h-120} Z' opacity='0.9'/></g>
+        <circle cx='1100' cy='90' r='38' fill='#fff7b2' opacity='0.95'/>
+      </svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+  if(theme === 'mountains'){
+    const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
+        <rect width='100%' height='100%' fill='#071020'/>
+        <g fill='#0ea5a4'><polygon points='0,${h} 220,${h-260} 480,${h}' opacity='0.9'/><polygon points='520,${h} 820,${h-340} 1180,${h}' opacity='0.92'/></g>
+        <g fill='#065f60' opacity='0.12'><rect width='100%' height='120' y='${h-120}'/></g>
+      </svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+  if(theme === 'funny'){
+    const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
+        <rect width='100%' height='100%' fill='#fff7ed'/>
+        <defs><pattern id='p' width='120' height='120' patternUnits='userSpaceOnUse'><rect width='120' height='120' fill='#fff7ed'/><circle cx='30' cy='30' r='8' fill='#fb923c'/><text x='48' y='80' font-size='30' font-family='Arial'>😄</text></pattern></defs>
+        <rect width='100%' height='100%' fill='url(#p)'/>
+      </svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+  if(theme === 'floral'){
+    const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
+        <rect width='100%' height='100%' fill='#f8fafc'/>
+        <g fill='#fde68a' opacity='0.95'><circle cx='80' cy='80' r='26'/><circle cx='220' cy='120' r='18'/><circle cx='380' cy='60' r='22'/><circle cx='520' cy='140' r='16'/></g>
+      </svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+
+  // vacation-inspired variations for 'random' selection
+  const variations = [
+    // tropical beach
+    () => {
+      const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
+        <defs>
+          <linearGradient id='b' x1='0' y1='0' x2='0' y2='1'>
+            <stop offset='0' stop-color='#7dd3fc'/>
+            <stop offset='1' stop-color='#dff6ff'/>
+          </linearGradient>
+        </defs>
+        <rect width='100%' height='100%' fill='url(#b)'/>
+        <rect y='${h-220}' width='100%' height='220' fill='#fef3c7'/>
+        <g fill='#60a5fa'><ellipse cx='300' cy='${h-110}' rx='420' ry='70'/></g>
+        <g fill='#065f46'><path d='M110 ${h-120} l40 -60 40 60z' opacity='0.95'/></g>
+      </svg>`;
+      return svg;
+    },
+    // cliff overlook (sunset)
+    () => {
+      const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
+        <defs><linearGradient id='s' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#ffb3a7'/><stop offset='1' stop-color='#ffdca6'/></linearGradient></defs>
+        <rect width='100%' height='100%' fill='url(#s)'/>
+        <g fill='#5b21b6' opacity='0.95'><polygon points='0,${h} 260,${h-300} 520,${h}'/><polygon points='560,${h} 840,${h-360} 1180,${h}'/></g>
+        <circle cx='1100' cy='100' r='38' fill='#fff3b0' opacity='0.9'/>
+      </svg>`;
+      return svg;
+    },
+    // island with palms
+    () => {
+      const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
+        <rect width='100%' height='100%' fill='#c7f9ff'/>
+        <rect y='${h-180}' width='100%' height='180' fill='#fff8dc'/>
+        <g fill='#0f766e'><ellipse cx='700' cy='${h-80}' rx='260' ry='50'/></g>
+        <g fill='#084a3d'><path d='M660 ${h-140} q20 -40 40 0 q-20 -10 -40 0z' opacity='0.9'/></g>
+      </svg>`;
+      return svg;
+    },
+    // coastal harbor (boats simplified)
+    () => {
+      const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
+        <rect width='100%' height='100%' fill='#e6f7ff'/>
+        <rect y='${h-200}' width='100%' height='200' fill='#dbeafe'/>
+        <g fill='#1e293b'><rect x='120' y='${h-160}' width='100' height='30' rx='6'/><path d='M130 ${h-160} l40 -24 40 24z' fill='#334155' opacity='0.9'/></g>
+        <g fill='#0ea5a4' opacity='0.08'><rect width='100%' height='120' y='${h-120}'/></g>
+      </svg>`;
+      return svg;
+    },
+    // mountain-lake sunrise
+    () => {
+      const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
+        <rect width='100%' height='100%' fill='#fff4e6'/>
+        <g fill='#93c5fd'><ellipse cx='400' cy='${h-140}' rx='480' ry='110'/></g>
+        <g fill='#0f172a'><polygon points='100,${h} 300,${h-300} 500,${h}' opacity='0.9'/></g>
+      </svg>`;
+      return svg;
+    }
+  ];
+  // pick variationIdx if provided, else random
+  const idx = (variationIdx === null) ? Math.floor(Math.random()*variations.length) : (variationIdx % variations.length);
+  const svg = variations[idx]();
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+/* ---------- Image loading ---------- */
+// Load array of dataURLs into Image objects
+function loadImages(dataURLs){
+  return Promise.all(dataURLs.map(url => new Promise((res) => {
+    const im = new Image();
+    im.onload = ()=> res(im);
+    im.onerror = ()=> res(im); // resolve even if error to avoid blocking
+    im.src = url;
+  })));
+}
+
+/* ---------- Drawing utilities ---------- */
+// Clip rounded rect path
+function roundedRectPath(ctx, x, y, w, h, r){
+  const rad = Math.max(0, Math.min(r, Math.min(w/2, h/2)));
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rad);
+  ctx.arcTo(x + w, y + h, x, y + h, rad);
+  ctx.arcTo(x, y + h, x, y, rad);
+  ctx.arcTo(x, y, x + w, y, rad);
+  ctx.closePath();
+}
+
+// Draw image cover (crop to fill)
+function drawImageCover(ctx, img, x, y, w, h){
+  if(!img.width || !img.height) return;
+  const imgRatio = img.width / img.height;
+  const boxRatio = w / h;
+  let sx=0, sy=0, sw=img.width, sh=img.height;
+  if(imgRatio > boxRatio){
+    // crop sides
+    sw = img.height * boxRatio;
+    sx = (img.width - sw)/2;
+  } else {
+    // crop top/bottom
+    sh = img.width / boxRatio;
+    sy = (img.height - sh)/2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
+/* ---------- Frame drawing ---------- */
+/* Draw framed image given style and settings
+   styles: classic, polaroid, circle, ornate, torn
+*/
+function drawFramedImage(ctx, img, x, y, w, h, style, settings){
+  const {borderWidth, borderColor, radius, shadowOn, shadowBlur, polaroidCaptionEnabled, titleText} = settings;
+
+  // polaroid needs extra bottom for caption
+  let extraBottom = 0;
+  if(style === 'polaroid' && polaroidCaptionEnabled && titleText) extraBottom = Math.max(10, Math.round(h * 0.08));
+
+  // overall card
+  const cardH = h + extraBottom;
+  // draw shadow if enabled
+  if(shadowOn && shadowBlur > 0){
+    ctx.save();
+    ctx.shadowColor = 'rgba(2,6,23,0.25)';
+    ctx.shadowBlur = shadowBlur;
+    ctx.shadowOffsetY = shadowBlur/3;
+    // draw a rounded rect as shadow base (fill invisible)
+    ctx.fillStyle = 'rgba(0,0,0,0.02)';
+    roundedRectPath(ctx, x, y, w, cardH, radius);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // inner area where image will be (account for border)
+  const innerX = x + borderWidth;
+  const innerY = y + borderWidth;
+  const innerW = w - borderWidth*2;
+  const innerH = h - borderWidth*2;
+
+  // draw style-specific background card and then image with clipping
+  if(style === 'polaroid'){
+    // white card larger at bottom
+    ctx.fillStyle = borderColor;
+    roundedRectPath(ctx, x, y, w, cardH, Math.max(6, radius));
+    ctx.fill();
+
+    // clip image area and draw
+    ctx.save();
+    roundedRectPath(ctx, innerX, innerY, innerW, innerH, Math.max(6, radius-2));
+    ctx.clip();
+    drawImageCover(ctx, img, innerX, innerY, innerW, innerH);
+    ctx.restore();
+
+    // polaroid caption
+    if(polaroidCaptionEnabled && titleText){
+      ctx.fillStyle = '#111827';
+      ctx.font = 'bold 14px system-ui,Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(titleText, x + w/2, y + h + Math.round(extraBottom*0.6));
+    }
+  } else if(style === 'circle'){
+    // outer ring
+    const cx = x + w/2;
+    const cy = y + h/2;
+    const r = Math.min(innerW, innerH)/2;
+    // border ring
+    ctx.fillStyle = borderColor;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + borderWidth, 0, Math.PI*2);
+    ctx.fill();
+    // clip inner circle and draw image
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.clip();
+    drawImageCover(ctx, img, cx - r, cy - r, r*2, r*2);
+    ctx.restore();
+  } else if(style === 'ornate'){
+    // ornate: base card with subtle inner pattern
+    ctx.fillStyle = borderColor;
+    roundedRectPath(ctx, x, y, w, cardH, radius);
+    ctx.fill();
+
+    // inner clip & draw image
+    const pad = Math.max(6, Math.floor(borderWidth/2));
+    ctx.save();
+    roundedRectPath(ctx, innerX + pad, innerY + pad, innerW - pad*2, innerH - pad*2, Math.max(4, radius-6));
+    ctx.clip();
+    drawImageCover(ctx, img, innerX + pad, innerY + pad, innerW - pad*2, innerH - pad*2);
+    ctx.restore();
+
+    // ornate overlay: simple decorative corners (procedural)
+    ctx.save();
+    ctx.strokeStyle = shadeColor(borderColor, -20);
+    ctx.lineWidth = Math.max(1, borderWidth/4);
+    const s = Math.min(18, Math.floor(radius/1.5)+6);
+    // draw corner curls
+    drawCurls(ctx, x + 6, y + 6, s);
+    drawCurls(ctx, x + w - 6, y + 6, s, true);
+    drawCurls(ctx, x + 6, y + cardH - 6, s, false, true);
+    drawCurls(ctx, x + w - 6, y + cardH - 6, s, true, true);
+    ctx.restore();
+  } else if(style === 'torn'){
+    // torn-paper effect: draw background as borderColor textured, then clip jagged edge and draw image
+    ctx.fillStyle = borderColor;
+    roundedRectPath(ctx, x, y, w, cardH, Math.max(4, radius/2));
+    ctx.fill();
+
+    // create jagged path for image clipping (simulate torn)
+    ctx.save();
+    ctx.beginPath();
+    const jagCount = 6;
+    const step = innerW / jagCount;
+    ctx.moveTo(innerX, innerY);
+    // top straight
+    ctx.lineTo(innerX + innerW, innerY);
+    // right zigzag
+    for(let i=0;i<jagCount;i++){
+      const yy = innerY + (i + 0.5) * (innerH / jagCount);
+      ctx.lineTo(innerX + innerW + (i%2?6:-6), yy);
+    }
+    ctx.lineTo(innerX + innerW, innerY + innerH);
+    // bottom jagged
+    for(let i=jagCount;i>=0;i--){
+      const xx = innerX + i * step;
+      const off = (i%2? -8: 8);
+      ctx.lineTo(xx, innerY + innerH + off);
+    }
+    // left side up
+    for(let i=jagCount;i>=0;i--){
+      const yy = innerY + i * (innerH / jagCount);
+      ctx.lineTo(innerX + (i%2? -6:6), yy);
+    }
+    ctx.closePath();
+    ctx.clip();
+    drawImageCover(ctx, img, innerX, innerY, innerW, innerH);
+    ctx.restore();
+
+    // faint torn edge highlight
+    ctx.save();
+    ctx.strokeStyle = shadeColor(borderColor, 20);
+    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const jagStep = innerW / jagCount;
+    ctx.moveTo(innerX, innerY + innerH + 2);
+    for(let i=0;i<=jagCount;i++){
+      const xx = innerX + i * jagStep;
+      const off = (i%2? -6:6);
+      ctx.lineTo(xx, innerY + innerH + off);
+    }
+    ctx.stroke();
+    ctx.restore();
+  } else {
+    // classic: white mat with border color as outer
+    ctx.fillStyle = borderColor;
+    roundedRectPath(ctx, x, y, w, cardH, radius);
+    ctx.fill();
+
+    ctx.save();
+    roundedRectPath(ctx, innerX, innerY, innerW, innerH, Math.max(4, radius-4));
+    ctx.clip();
+    drawImageCover(ctx, img, innerX, innerY, innerW, innerH);
+    ctx.restore();
+  }
+}
+
+// small decorative curls used by ornate style
+function drawCurls(ctx, cx, cy, s, mirrorX=false, mirrorY=false){
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(mirrorX?-1:1, mirrorY?-1:1);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(s*0.2, -s*0.8, s*0.8, -s*0.2, s, -s);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// shade a hex color by percent (-100..100)
+function shadeColor(hex, percent) {
+  // hex like #rrggbb
+  const f = hex.slice(1);
+  const r = parseInt(f.substring(0,2),16);
+  const g = parseInt(f.substring(2,4),16);
+  const b = parseInt(f.substring(4,6),16);
+  const t = percent < 0 ? 0 : 255;
+  const p = Math.abs(percent)/100;
+  const R = Math.round((t - r) * p + r);
+  const G = Math.round((t - g) * p + g);
+  const B = Math.round((t - b) * p + b);
+  return "#" + ((1<<24) + (R<<16) + (G<<8) + B).toString(16).slice(1);
+}
+
+/* ---------- Layout computation ---------- */
+// Compute grid (cols, rows) based on count with some heuristics
+function computeGrid(n){
+  let cols = Math.ceil(Math.sqrt(n));
+  let rows = Math.ceil(n/cols);
+  if(n === 2){ cols = 2; rows = 1; }
+  if(n === 3){ cols = 3; rows = 1; }
+  if(n === 5){ cols = 3; rows = 2; }
+  if(n === 6){ cols = 3; rows = 2; }
+  return {cols, rows};
+}
+
+/* ---------- Compose final canvas ---------- */
+async function generateComposition(shuffleBackground=false){
+  const uploaded = slots.filter(s => s && s.dataURL).map(s=>s.dataURL);
+  if(uploaded.length === 0){
+    alert('Please upload at least one image.');
+    return;
+  }
+  const imgs = await loadImages(uploaded);
+
+  // Choose background. If theme==random, pick one variation (or shuffle if requested)
+  const theme = themeSelect.value;
+  let bgDataURI;
+  if(theme === 'random'){
+    if(shuffleBackground || lastBgIndex === null){
+      lastBgIndex = Math.floor(Math.random()*10); // will be modded inside function
+    }
+    bgDataURI = backgroundDataURI('random', lastBgIndex);
+    // increment seed so next shuffle picks different likely
+    if(shuffleBackground) lastBgIndex = Math.floor(Math.random()*10);
+  } else {
+    bgDataURI = backgroundDataURI(theme);
+  }
+
+  // draw background
+  const bgImg = new Image();
+  bgImg.src = bgDataURI;
+  await new Promise(r => bgImg.onload = r);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(bgImg, 0,0, canvas.width, canvas.height);
+
+  // title text space
+  const title = (titleInput.value || '').trim();
+  if(title){
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.font = 'bold 28px system-ui,Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(title, canvas.width/2, 36);
+    ctx.restore();
+  }
+
+  // layout grid
+  const count = imgs.length;
+  const {cols, rows} = computeGrid(count);
+  const spacing = parseFloat(spacingInput.value);
+  const outerPad = Math.round(canvas.width * spacing);
+  const gutter = Math.round(Math.min(48, canvas.width * spacing / 1.6));
+  // adjust available area if title present
+  const titleOffset = title ? 60 : 0;
+  const availW = canvas.width - outerPad*2;
+  const availH = canvas.height - outerPad*2 - titleOffset;
+  const cellW = Math.floor((availW - (cols-1)*gutter)/cols);
+  const cellH = Math.floor((availH - (rows-1)*gutter)/rows);
+
+  const totalGridW = cellW*cols + gutter*(cols-1);
+  const totalGridH = cellH*rows + gutter*(rows-1);
+  const startX = Math.floor((canvas.width - totalGridW)/2);
+  const startY = Math.floor((canvas.height - totalGridH)/2) + titleOffset;
+
+  // draw each framed image
+  const borderWidth = parseInt(borderWidthInput.value,10) || 0;
+  const borderColor = borderColorInput.value || '#ffffff';
+  const radius = parseInt(radiusInput.value,10) || 12;
+  const shadowOn = shadowToggle.checked;
+  const shadowBlur = parseInt(shadowBlurInput.value,10) || 0;
+  const rotationOn = rotationToggle.checked;
+  const polaroidCap = polaroidCaption.checked;
+
+  const settings = {
+    borderWidth, borderColor, radius, shadowOn, shadowBlur,
+    polaroidCaptionEnabled: polaroidCap, titleText: title
+  };
+
+  // random rotations (small)
+  const rotations = imgs.map(()=> rotationOn ? (Math.random()*8 - 4) * Math.PI/180 : 0);
+
+  for(let i=0;i<imgs.length;i++){
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    const x = startX + c * (cellW + gutter);
+    const y = startY + r * (cellH + gutter);
+    const margin = Math.max(6, Math.floor(Math.min(cellW, cellH) * 0.02));
+    const drawW = cellW - margin*2;
+    const drawH = cellH - margin*2;
+
+    ctx.save();
+    // small translation & rotation around center to make collage feel organic
+    const cx = x + cellW/2;
+    const cy = y + cellH/2;
+    ctx.translate(cx, cy);
+    ctx.rotate(rotations[i]);
+    ctx.translate(-cx, -cy);
+
+    drawFramedImage(ctx, imgs[i], x + margin, y + margin, drawW, drawH, styleSelect.value, settings);
+
+    ctx.restore();
+  }
+
+  // composition completed
+  lastCompositionDataURL = canvas.toDataURL('image/png');
+  downloadBtn.disabled = false;
+  statusEl.textContent = 'Composition generated';
+  updateMeta();
+}
+
+/* ---------- Controls handlers ---------- */
+function updateMeta(){
+  metaTheme.textContent = themeSelect.value;
+  metaStyle.textContent = styleSelect.value;
+  metaCount.textContent = slots.filter(s=>s && s.dataURL).length;
+  spacingVal.textContent = spacingInput.value;
+  if(lastCompositionDataURL) statusEl.textContent = 'Ready';
+}
+
+generateBtn.addEventListener('click', ()=> generateComposition(true));
+downloadBtn.addEventListener('click', ()=>{
+  if(!lastCompositionDataURL){
+    alert('Generate composition first.');
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = lastCompositionDataURL;
+  a.download = 'composition.png';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+resetBtn.addEventListener('click', ()=>{
+  // reset controls and slots
+  numInput.value = 4;
+  themeSelect.value = 'scenic';
+  styleSelect.value = 'classic';
+  spacingInput.value = 0.12;
+  borderWidthInput.value = 8;
+  borderColorInput.value = '#ffffff';
+  radiusInput.value = 12;
+  shadowToggle.checked = true;
+  shadowBlurInput.value = 12;
+  rotationToggle.checked = true;
+  polaroidCaption.checked = false;
+  titleInput.value = '';
+  lastCompositionDataURL = null;
+  downloadBtn.disabled = true;
+  lastBgIndex = null;
+  createSlots(4);
+  // redraw preview background
+  (async ()=>{
+    const bg = new Image();
+    bg.src = backgroundDataURI('scenic');
+    await new Promise(r=>bg.onload=r);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(bg,0,0,canvas.width,canvas.height);
+    updateMeta();
+  })();
+});
+shuffleBgBtn.addEventListener('click', ()=>{
+  lastBgIndex = Math.floor(Math.random()*1000);
+  // redraw preview background without generating composition
+  const theme = themeSelect.value;
+  const bgURI = (theme === 'random') ? backgroundDataURI('random', lastBgIndex) : backgroundDataURI(theme);
+  const bg = new Image();
+  bg.src = bgURI;
+  bg.onload = ()=> { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(bg,0,0,canvas.width,canvas.height); statusEl.textContent='Background shuffled'; };
+});
+numInput.addEventListener('input', ()=>{
+  let v = parseInt(numInput.value,10);
+  if(isNaN(v) || v<1) v = 1;
+  if(v>9) v = 9;
+  numInput.value = v;
+  createSlots(v);
+});
+themeSelect.addEventListener('change', updateMeta);
+styleSelect.addEventListener('change', updateMeta);
+spacingInput.addEventListener('input', ()=> { spacingVal.textContent = spacingInput.value; });
+[borderWidthInput,borderColorInput,radiusInput,shadowToggle,shadowBlurInput,rotationToggle,polaroidCaption].forEach(el=> el.addEventListener('input', updateMeta));
+
+/* ---------- Initial setup ---------- */
+// initial slots and preview background
+createSlots(parseInt(numInput.value || 4));
+(async ()=>{
+  const bg = new Image();
+  bg.src = backgroundDataURI('scenic');
+  await new Promise(r=>bg.onload = r);
+  ctx.drawImage(bg,0,0,canvas.width,canvas.height);
+  updateMeta();
+})();
+
+</script>
+</body>
+</html>

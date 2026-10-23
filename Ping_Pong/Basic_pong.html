@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Simple Table Tennis (Pong) — Arrow Keys</title>
+  <style>
+    /* Simple styling to center the canvas and show info */
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #111;
+      color: #eee;
+      user-select: none;
+    }
+
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 20px;
+      color: #fff;
+    }
+
+    #game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    canvas {
+      background: #0b2b3a;
+      border: 3px solid #2ec4b6;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+      image-rendering: crisp-edges;
+    }
+
+    #info {
+      font-size: 14px;
+      color: #cfe8e0;
+      text-align: center;
+    }
+
+    #controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    button {
+      background: #2ec4b6;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: #012;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover { filter: brightness(0.95); }
+    .score {
+      font-size: 20px;
+      font-weight: bold;
+      color: #ffd166;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Table Tennis — Arrow Keys</h1>
+  <div id="game-container">
+    <canvas id="game" width="900" height="520"></canvas>
+    <div class="score" id="score">Player: 0 &nbsp;&nbsp; Computer: 0</div>
+    <div id="info">
+      Controls: Arrow Up / Arrow Down to move. Press Space to pause/resume. Click "Restart" to reset scores.
+    </div>
+    <div id="controls">
+      <button id="restartBtn">Restart</button>
+      <button id="serveBtn">Serve (immediate)</button>
+    </div>
+  </div>
+
+  <script>
+  // Simple Pong / Table Tennis game in one file.
+  // Player controls left paddle with ArrowUp and ArrowDown.
+  // Basic AI controls right paddle by following the ball with a max speed.
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  // Game size
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // Paddles
+  const PADDLE_WIDTH = 12;
+  const PADDLE_HEIGHT = 110;
+  const PADDLE_MARGIN = 20;
+
+  // Player (left) paddle
+  const player = {
+    x: PADDLE_MARGIN,
+    y: (H - PADDLE_HEIGHT) / 2,
+    w: PADDLE_WIDTH,
+    h: PADDLE_HEIGHT,
+    speed: 7,
+    dy: 0
+  };
+
+  // Computer (right) paddle
+  const computer = {
+    x: W - PADDLE_MARGIN - PADDLE_WIDTH,
+    y: (H - PADDLE_HEIGHT) / 2,
+    w: PADDLE_WIDTH,
+    h: PADDLE_HEIGHT,
+    speed: 5 // max speed the AI paddle can move per frame
+  };
+
+  // Ball
+  const ball = {
+    x: W / 2,
+    y: H / 2,
+    r: 9,
+    speed: 5,       // base speed magnitude
+    vx: 0, vy: 0,   // velocity components
+    stuck: true     // when true, ball waits for serve
+  };
+
+  // Score
+  let scorePlayer = 0;
+  let scoreComputer = 0;
+
+  // Game state
+  let paused = false;
+
+  // Controls state
+  const keys = {
+    ArrowUp: false,
+    ArrowDown: false
+  };
+
+  // Helpers
+  function resetBall(toRight = true) {
+    ball.x = W / 2;
+    ball.y = H / 2;
+    ball.speed = 5;
+    ball.stuck = false;
+    // Start with a gentle angle
+    const angle = (Math.random() * 2 - 1) * (Math.PI / 6); // -30 to 30 degrees
+    ball.vx = (toRight ? 1 : -1) * ball.speed * Math.cos(angle);
+    ball.vy = ball.speed * Math.sin(angle);
+  }
+
+  function serveImmediate() {
+    // Serve towards the player who last lost a point? For now random direction
+    const toRight = Math.random() > 0.4;
+    resetBall(toRight);
+  }
+
+  function restartGame() {
+    scorePlayer = 0;
+    scoreComputer = 0;
+    updateScore();
+    player.y = (H - PADDLE_HEIGHT) / 2;
+    computer.y = (H - PADDLE_HEIGHT) / 2;
+    ball.stuck = true;
+    ball.x = W / 2;
+    ball.y = H / 2;
+  }
+
+  function updateScore() {
+    document.getElementById('score').textContent = `Player: ${scorePlayer}   Computer: ${scoreComputer}`;
+  }
+
+  // Input handling
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+      keys[e.code] = true;
+      e.preventDefault();
+    } else if (e.code === 'Space') {
+      paused = !paused;
+      e.preventDefault();
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+      keys[e.code] = false;
+      e.preventDefault();
+    }
+  });
+
+  document.getElementById('restartBtn').addEventListener('click', () => {
+    restartGame();
+  });
+
+  document.getElementById('serveBtn').addEventListener('click', () => {
+    serveImmediate();
+  });
+
+  // Collision detection: simple AABB for paddle vs ball approximated with rectangle
+  function rectCircleColliding(px, py, pw, ph, cx, cy, cr) {
+    // Closest point on rectangle to circle center
+    const closestX = Math.max(px, Math.min(cx, px + pw));
+    const closestY = Math.max(py, Math.min(cy, py + ph));
+    const dx = cx - closestX;
+    const dy = cy - closestY;
+    return (dx * dx + dy * dy) <= cr * cr;
+  }
+
+  // Main update
+  function update() {
+    if (paused) return;
+
+    // Player movement
+    if (keys.ArrowUp && !keys.ArrowDown) {
+      player.y -= player.speed;
+    } else if (keys.ArrowDown && !keys.ArrowUp) {
+      player.y += player.speed;
+    }
+    // Keep player inside
+    if (player.y < 0) player.y = 0;
+    if (player.y + player.h > H) player.y = H - player.h;
+
+    // Computer AI: move toward ball with limited speed
+    // The AI is stronger when the ball is on its side and slower otherwise
+    const paddleCenter = computer.y + computer.h / 2;
+    const diff = ball.y - paddleCenter;
+    // AI aggressiveness: when ball is on AI side, faster reaction
+    const aiFactor = (ball.x > W / 2) ? 1.05 : 0.65;
+    const maxMove = computer.speed * aiFactor;
+    if (Math.abs(diff) > 6) {
+      computer.y += Math.sign(diff) * Math.min(maxMove, Math.abs(diff));
+    }
+    // Keep computer inside
+    if (computer.y < 0) computer.y = 0;
+    if (computer.y + computer.h > H) computer.y = H - computer.h;
+
+    // Ball update
+    if (!ball.stuck) {
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Top and bottom collisions
+      if (ball.y - ball.r < 0) {
+        ball.y = ball.r;
+        ball.vy = -ball.vy;
+      } else if (ball.y + ball.r > H) {
+        ball.y = H - ball.r;
+        ball.vy = -ball.vy;
+      }
+
+      // Paddle collisions
+      // Player paddle
+      if (rectCircleColliding(player.x, player.y, player.w, player.h, ball.x, ball.y, ball.r)) {
+        // Position ball outside paddle
+        ball.x = player.x + player.w + ball.r;
+        // Compute hit relative position (-1 at top, +1 at bottom)
+        const rel = (ball.y - (player.y + player.h / 2)) / (player.h / 2);
+        const maxBounce = Math.PI / 3; // 60 degrees
+        const angle = rel * maxBounce;
+        const dir = 1; // ball goes to right after hitting left paddle
+        ball.speed *= 1.03; // slightly increase speed
+        ball.vx = dir * ball.speed * Math.cos(angle);
+        ball.vy = ball.speed * Math.sin(angle);
+      }
+
+      // Computer paddle
+      if (rectCircleColliding(computer.x, computer.y, computer.w, computer.h, ball.x, ball.y, ball.r)) {
+        ball.x = computer.x - ball.r;
+        const rel = (ball.y - (computer.y + computer.h / 2)) / (computer.h / 2);
+        const maxBounce = Math.PI / 3;
+        const angle = rel * maxBounce;
+        const dir = -1; // ball goes to left after hitting right paddle
+        ball.speed *= 1.03;
+        ball.vx = dir * ball.speed * Math.cos(angle);
+        ball.vy = ball.speed * Math.sin(angle);
+      }
+
+      // Scoring: left or right out of bounds
+      if (ball.x - ball.r < 0) {
+        // Computer scores
+        scoreComputer += 1;
+        updateScore();
+        ball.stuck = true;
+        ball.x = W / 2;
+        ball.y = H / 2;
+        // Serve to the right after short pause (automatic)
+        setTimeout(() => resetBall(true), 500);
+      } else if (ball.x + ball.r > W) {
+        // Player scores
+        scorePlayer += 1;
+        updateScore();
+        ball.stuck = true;
+        ball.x = W / 2;
+        ball.y = H / 2;
+        setTimeout(() => resetBall(false), 500);
+      }
+
+      // Cap ball speed to avoid it getting too fast
+      const maxSpeed = 16;
+      const currentSpeed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+      if (currentSpeed > maxSpeed) {
+        ball.vx = (ball.vx / currentSpeed) * maxSpeed;
+        ball.vy = (ball.vy / currentSpeed) * maxSpeed;
+      }
+    } else {
+      // If stuck (waiting serve), keep ball next to the serving side or center
+      ball.x = W / 2;
+      ball.y = player.y + player.h / 2;
+    }
+  }
+
+  // Drawing
+  function draw() {
+    // Clear
+    ctx.clearRect(0, 0, W, H);
+
+    // Background gradient
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#073642');
+    g.addColorStop(1, '#02141b');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // Middle dashed line
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 14]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Paddles
+    ctx.fillStyle = '#ffd166';
+    roundRect(ctx, player.x, player.y, player.w, player.h, 6, true, false);
+    ctx.fillStyle = '#2ec4b6';
+    roundRect(ctx, computer.x, computer.y, computer.w, computer.h, 6, true, false);
+
+    // Ball
+    ctx.fillStyle = '#ffffff';
+    circle(ctx, ball.x, ball.y, ball.r);
+
+    // HUD: small instructions
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = '12px Arial';
+    ctx.fillText('Left: you (Arrow Up/Down)', 16, 18);
+    ctx.fillText('Right: computer', W - 150, 18);
+
+    // Pause overlay
+    if (paused) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff';
+      ctx.font = '28px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('PAUSED', W / 2, H / 2);
+      ctx.textAlign = 'start';
+    }
+  }
+
+  // Utility draw functions
+  function circle(ctx, x, y, r) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  // Main loop
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Start
+  restartGame();
+  // initial automatic serve after 800ms to let player get ready
+  setTimeout(() => resetBall(Math.random() > 0.5), 800);
+  requestAnimationFrame(loop);
+
+  </script>
+</body>
+</html>

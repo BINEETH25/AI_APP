@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Photo Frame Composer — Single File App</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{
+    --bg:#f5f7fb;
+    --panel:#ffffff;
+    --accent:#2b6cb0;
+    --muted:#6b7280;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  body{
+    background:linear-gradient(180deg,var(--bg),#eef2f7);
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:28px;
+    box-sizing:border-box;
+  }
+
+  .app{
+    width:1100px;
+    max-width:96%;
+    background:var(--panel);
+    border-radius:12px;
+    box-shadow:0 8px 30px rgba(15,23,42,0.08);
+    padding:20px;
+  }
+
+  h1{margin:6px 0 14px;font-size:20px;}
+  p.lead{margin:0 0 18px;color:var(--muted);font-size:13px;}
+
+  .controls{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+    align-items:end;
+  }
+
+  label{display:block;font-size:13px;color:#233243;margin-bottom:6px;}
+  input[type="number"], select, input[type="range"], input[type="text"]{
+    width:100%;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid #dbe4ef;
+    background:#fff;
+    font-size:13px;
+  }
+
+  .file-list{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;}
+  .file-slot{
+    width:calc(25% - 8px);
+    min-width:150px;
+    background:#f8fafc;
+    border-radius:10px;
+    padding:8px;
+    box-sizing:border-box;
+    border:1px dashed transparent;
+    text-align:center;
+  }
+  .file-slot input[type=file]{display:none;}
+  .file-slot .thumb{
+    height:86px;
+    border-radius:8px;
+    background:linear-gradient(180deg,#e9f0fa,#ffffff);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    margin-bottom:8px;
+    border:1px solid rgba(10,20,40,0.03);
+  }
+  .file-slot .thumb img{max-width:100%;max-height:100%;display:block;}
+  .file-slot button{
+    padding:6px 8px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;cursor:pointer;
+  }
+
+  .actions{margin-top:14px;display:flex;gap:10px;align-items:center;}
+  .btn{
+    padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:600;
+    background:linear-gradient(180deg,var(--accent),#23579a);color:#fff;
+    box-shadow:0 6px 18px rgba(43,108,176,0.18);
+  }
+  .btn.secondary{
+    background:#fff;color:var(--accent);border:1px solid #e1e8f5;box-shadow:none;font-weight:600;
+  }
+  .muted{color:var(--muted);font-size:13px;}
+
+  /* Output area */
+  .output{
+    margin-top:18px;
+    display:flex;
+    gap:18px;
+    align-items:flex-start;
+  }
+  .canvas-wrap{
+    flex:1;
+    background:linear-gradient(180deg,#eef3fb,#f8fafc);
+    border-radius:10px;
+    padding:12px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+  }
+  canvas{
+    max-width:100%;
+    border-radius:12px;
+    box-shadow:0 10px 30px rgba(9,15,30,0.08);
+    background:#fff;
+  }
+
+  .preview-info{width:260px;}
+  .preview-info h3{font-size:14px;margin:4px 0;}
+  .preview-info p{font-size:13px;color:var(--muted);margin:8px 0 12px;}
+
+  .help{font-size:12px;color:var(--muted);}
+
+  footer{margin-top:14px;font-size:12px;color:var(--muted);text-align:center;}
+  @media (max-width:880px){
+    .controls{grid-template-columns:1fr;}
+    .file-slot{width:calc(50% - 8px);}
+    .output{flex-direction:column;}
+    .preview-info{width:100%}
+  }
+</style>
+</head>
+<body>
+<div class="app" role="application" aria-label="Photo Frame Composer">
+  <h1>Photo Frame Composer</h1>
+  <p class="lead">Create a single background layout of your uploaded images with decorative frames. Choose how many images, pick a theme and a frame style, then upload and generate.</p>
+
+  <div class="controls" id="controls">
+    <div>
+      <label for="count">Number of images (1–9)</label>
+      <input id="count" type="number" min="1" max="9" value="4" />
+    </div>
+    <div>
+      <label for="theme">Background theme</label>
+      <select id="theme">
+        <option value="scenic">Scenic (sky & mountains)</option>
+        <option value="mountains">Mountains (bold)</option>
+        <option value="funny">Funny (dots & emojis)</option>
+        <option value="floral">Floral pattern</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="style">Frame style</label>
+      <select id="style">
+        <option value="classic">Classic (rounded mat)</option>
+        <option value="polaroid">Polaroid</option>
+        <option value="circle">Circular</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="spacing">Spacing & scale</label>
+      <input id="spacing" type="range" min="0.06" max="0.25" step="0.01" value="0.12" />
+    </div>
+
+    <div class="file-list" id="fileList" aria-live="polite">
+      <!-- file slots injected here -->
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="generateBtn">Generate Gallery</button>
+    <button class="btn secondary" id="downloadBtn" disabled>Download PNG</button>
+    <div style="flex:1"></div>
+    <div class="muted">Tip: you can rearrange uploads by re-uploading slots.</div>
+  </div>
+
+  <div class="output">
+    <div class="canvas-wrap">
+      <canvas id="canvas" width="1400" height="900" aria-label="Generated composition"></canvas>
+    </div>
+
+    <div class="preview-info">
+      <h3>Preview & Options</h3>
+      <p class="help">The canvas renders your chosen theme across the whole page and places each image in a decorative frame. Use Download to save a flattened PNG.</p>
+      <div style="margin-top:10px;">
+        <strong>Theme:</strong> <span id="infoTheme">scenic</span><br/>
+        <strong>Style:</strong> <span id="infoStyle">classic</span><br/>
+        <strong>Images:</strong> <span id="infoCount">0</span>
+      </div>
+    </div>
+  </div>
+
+  <footer>Made with care • Single-file HTML app</footer>
+</div>
+
+<script>
+/* Photo Frame Composer — single file app
+   - Dynamic file slots created based on number input
+   - Themes are SVG data URIs drawn as canvas background
+   - Images loaded via FileReader and drawn with rounded frames
+   - Export to PNG via canvas.toDataURL()
+*/
+
+const countInput = document.getElementById('count');
+const themeSelect = document.getElementById('theme');
+const styleSelect = document.getElementById('style');
+const spacingRange = document.getElementById('spacing');
+const fileList = document.getElementById('fileList');
+const generateBtn = document.getElementById('generateBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const infoTheme = document.getElementById('infoTheme');
+const infoStyle = document.getElementById('infoStyle');
+const infoCount = document.getElementById('infoCount');
+
+let fileSlots = []; // {input, previewImg, file}
+const MAX = 9;
+
+function makeFileSlots(n){
+  fileList.innerHTML = '';
+  fileSlots = [];
+  for(let i=0;i<n;i++){
+    const slot = document.createElement('div');
+    slot.className = 'file-slot';
+    slot.innerHTML = `
+      <div class="thumb" data-i="${i}">
+        <span style="color:#9aa8c8;font-size:13px">No image</span>
+      </div>
+      <input type="file" accept="image/*" data-i="${i}" />
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <button data-i="${i}">Upload</button>
+        <button data-i="${i}" class="remove" style="background:#ef4444;border:0;color:#fff">Clear</button>
+      </div>
+    `;
+    fileList.appendChild(slot);
+
+    const input = slot.querySelector('input[type=file]');
+    const thumb = slot.querySelector('.thumb');
+    const uploadBtn = slot.querySelector('button:not(.remove)');
+    const clearBtn = slot.querySelector('.remove');
+
+    uploadBtn.addEventListener('click',()=> input.click());
+    clearBtn.addEventListener('click',()=>{
+      input.value='';
+      thumb.innerHTML = '<span style="color:#9aa8c8;font-size:13px">No image</span>';
+      slot.file = null;
+      updateInfo();
+    });
+
+    input.addEventListener('change', e=>{
+      const f = input.files && input.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = evt=>{
+        thumb.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = evt.target.result;
+        thumb.appendChild(img);
+        slot.file = f;
+        slot.dataURL = evt.target.result;
+        updateInfo();
+      };
+      reader.readAsDataURL(f);
+    });
+
+    fileSlots.push(slot);
+  }
+  updateInfo();
+}
+
+function updateInfo(){
+  infoTheme.textContent = themeSelect.value;
+  infoStyle.textContent = styleSelect.value;
+  const count = fileSlots.filter(s=>s.file).length;
+  infoCount.textContent = `${count} uploaded`;
+  downloadBtn.disabled = true;
+}
+
+// Theme SVG generators
+function themeSVG(type, w, h){
+  if(type==='scenic'){
+    const svg = `
+    <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>
+      <defs>
+        <linearGradient id='g1' x1='0' y1='0' x2='0' y2='1'>
+          <stop offset='0' stop-color='#87CEEB'/>
+          <stop offset='1' stop-color='#e8f2ff'/>
+        </linearGradient>
+      </defs>
+      <rect width='100%' height='100%' fill='url(#g1)'/>
+      <g fill='#e9f4ff' opacity='0.9'>
+        <ellipse cx='200' cy='${h-120}' rx='380' ry='120'/>
+        <ellipse cx='740' cy='${h-80}' rx='600' ry='140'/>
+      </g>
+      <g fill='#3b82f6'>
+        <path d='M120 ${h-120} L260 ${h-320} L400 ${h-120} Z' opacity='0.9'/>
+        <path d='M500 ${h-120} L700 ${h-370} L920 ${h-120} Z' opacity='0.95'/>
+      </g>
+      <circle cx='980' cy='90' r='40' fill='#fff9c4' opacity='0.95'/>
+    </svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+  if(type==='mountains'){
+    const svg = `
+    <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>
+      <rect width='100%' height='100%' fill='#0f172a'/>
+      <g fill='#0ea5a4'>
+        <polygon points='0,${h} 280,${h-300} 560,${h}' opacity='0.85'/>
+        <polygon points='540,${h} 860,${h-360} 1180,${h}' opacity='0.9'/>
+      </g>
+      <g fill='#06b6d4' opacity='0.12'>
+        <rect width='100%' height='120' y='${h-120}'/>
+      </g>
+    </svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+  if(type==='funny'){
+    const svg = `
+    <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>
+      <rect width='100%' height='100%' fill='#fff7ed'/>
+      <defs>
+        <pattern id='p' width='120' height='120' patternUnits='userSpaceOnUse'>
+          <rect width='120' height='120' fill='#fff7ed'/>
+          <circle cx='30' cy='30' r='8' fill='#f97316' opacity='0.9'/>
+          <circle cx='100' cy='90' r='6' fill='#fb923c' opacity='0.7'/>
+          <text x='50' y='70' font-size='30' font-family='Arial' fill='#f59e0b'>😄</text>
+        </pattern>
+      </defs>
+      <rect width='100%' height='100%' fill='url(#p)'/>
+    </svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+  // floral
+  const svg = `
+  <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>
+    <rect width='100%' height='100%' fill='#f8fafc'/>
+    <g fill='#fde68a' opacity='0.9'>
+      <circle cx='80' cy='80' r='26'/>
+      <circle cx='220' cy='120' r='18'/>
+      <circle cx='380' cy='60' r='22'/>
+      <circle cx='520' cy='140' r='16'/>
+      <circle cx='760' cy='100' r='20'/>
+    </g>
+  </svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+// Draw rounded rectangle
+function roundRectPath(ctx,x,y,w,h,r){
+  const radius = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+radius,y);
+  ctx.arcTo(x+w, y, x+w, y+h, radius);
+  ctx.arcTo(x+w, y+h, x, y+h, radius);
+  ctx.arcTo(x, y+h, x, y, radius);
+  ctx.arcTo(x, y, x+w, y, radius);
+  ctx.closePath();
+}
+
+// Draw a single framed image onto canvas with style
+function drawFramedImage(ctx, img, x, y, w, h, style){
+  // mat gap
+  const mat = Math.floor(Math.min(w,h) * 0.06);
+  const innerX = x + mat;
+  const innerY = y + mat;
+  const innerW = w - mat*2;
+  const innerH = h - mat*2;
+
+  if(style === 'polaroid'){
+    // polaroid white background larger bottom
+    const extra = Math.max(14, Math.floor(h * 0.08));
+    ctx.fillStyle = '#ffffff';
+    roundRectPath(ctx, x, y, w, h + extra, 18);
+    ctx.fill();
+    // shadow
+    ctx.shadowColor = 'rgba(15,23,42,0.12)';
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 6;
+    // image area
+    ctx.save();
+    ctx.shadowColor = 'transparent';
+    roundRectPath(ctx, innerX, innerY, innerW, innerH, 12);
+    ctx.clip();
+    ctx.drawImage(img, innerX, innerY, innerW, innerH);
+    ctx.restore();
+    // reset shadow
+    ctx.shadowColor = 'transparent';
+  } else if(style === 'circle'){
+    // circle white ring
+    const cx = x + w/2;
+    const cy = y + h/2;
+    const r = Math.min(innerW, innerH)/2;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(cx,cy,r+6,0,Math.PI*2);
+    ctx.fill();
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.clip();
+    ctx.drawImage(img, cx - r, cy - r, r*2, r*2);
+    ctx.restore();
+    // small shadow
+    ctx.shadowColor = 'rgba(2,6,23,0.12)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 6;
+    // draw subtle outer ring for depth
+    ctx.shadowColor = 'transparent';
+  } else {
+    // classic: mat border with rounded corners
+    ctx.fillStyle = '#ffffff';
+    roundRectPath(ctx, x, y, w, h, 16);
+    ctx.fill();
+    // inner image with clip
+    ctx.save();
+    roundRectPath(ctx, innerX, innerY, innerW, innerH, 10);
+    ctx.clip();
+    // fit cover: compute aspect-fit crop to cover area
+    const iw = img.width, ih = img.height;
+    const imgRatio = iw/ih, boxRatio = innerW/innerH;
+    let drawW = innerW, drawH = innerH, dx = innerX, dy = innerY;
+    if(imgRatio > boxRatio){
+      // image wider, crop sides
+      drawH = innerH;
+      drawW = drawH * imgRatio;
+      dx = innerX - (drawW - innerW)/2;
+    } else {
+      drawW = innerW;
+      drawH = drawW / imgRatio;
+      dy = innerY - (drawH - innerH)/2;
+    }
+    ctx.drawImage(img, dx, dy, drawW, drawH);
+    ctx.restore();
+
+    // tiny shadow
+    ctx.shadowColor = 'rgba(2,6,23,0.06)';
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 8;
+    // reset
+    ctx.shadowColor = 'transparent';
+  }
+}
+
+// Main generate function
+async function generate(){
+  const n = Math.min(MAX, Math.max(1, parseInt(countInput.value||4)));
+  const style = styleSelect.value;
+  const spacing = parseFloat(spacingRange.value);
+  const theme = themeSelect.value;
+
+  // gather images data URLs from slots; if slot empty, skip
+  const imgs = [];
+  for(const s of fileSlots){
+    if(s.dataURL){
+      imgs.push(s.dataURL);
+    }
+  }
+  if(imgs.length === 0){
+    alert('Please upload at least one image.');
+    return;
+  }
+
+  // load images
+  const loaded = await Promise.all(imgs.map(src=>new Promise((res,rej)=>{
+    const im = new Image();
+    im.onload = ()=>res(im);
+    im.onerror = ()=>res(im); // resolve anyway
+    im.src = src;
+  })));
+
+  const canvasW = canvas.width;
+  const canvasH = canvas.height;
+
+  // draw background theme (fill full)
+  const bg = new Image();
+  bg.src = themeSVG(theme, canvasW, canvasH);
+  await new Promise(r=>bg.onload = r);
+
+  ctx.clearRect(0,0,canvasW,canvasH);
+  ctx.drawImage(bg, 0,0, canvasW, canvasH);
+
+  // compute layout grid based on number of images (use number of uploaded images)
+  const count = loaded.length;
+  let cols = Math.ceil(Math.sqrt(count));
+  let rows = Math.ceil(count/cols);
+
+  // adjust for some nice grids
+  if(count === 2){ cols = 2; rows = 1; }
+  if(count === 3){ cols = 3; rows = 1; }
+  if(count === 5){ cols = 3; rows = 2; }
+  if(count === 6){ cols = 3; rows = 2; }
+
+  // compute cell sizes
+  const pad = Math.floor(canvasW * spacing); // outer padding around grid
+  const availableW = canvasW - pad*2;
+  const availableH = canvasH - pad*2;
+  const gutter = Math.floor(Math.min(24, canvasW * spacing/1.5));
+  const cellW = Math.floor((availableW - (cols-1)*gutter)/cols);
+  const cellH = Math.floor((availableH - (rows-1)*gutter)/rows);
+
+  // center the grid area vertically and horizontally
+  const totalGridW = cellW*cols + gutter*(cols-1);
+  const totalGridH = cellH*rows + gutter*(rows-1);
+  const startX = Math.floor((canvasW - totalGridW)/2);
+  const startY = Math.floor((canvasH - totalGridH)/2);
+
+  // optionally shuffle a bit for organic placement (small rotations)
+  const rotations = loaded.map(()=> (Math.random()*6 - 3) * Math.PI/180); // -3..3 degrees
+
+  // draw each framed image
+  for(let i=0;i<loaded.length;i++){
+    const row = Math.floor(i/cols);
+    const col = i % cols;
+    const x = startX + col * (cellW + gutter);
+    const y = startY + row * (cellH + gutter);
+    const margin = Math.floor(Math.min(cellW, cellH) * 0.02);
+
+    // draw lightly rotated group for natural effect
+    ctx.save();
+    const cx = x + cellW/2;
+    const cy = y + cellH/2;
+    ctx.translate(cx, cy);
+    ctx.rotate(rotations[i]);
+    ctx.translate(-cx, -cy);
+
+    const drawW = cellW - margin*2;
+    const drawH = cellH - margin*2;
+    drawFramedImage(ctx, loaded[i], x + margin, y + margin, drawW, drawH, style);
+
+    ctx.restore();
+  }
+
+  downloadBtn.disabled = false;
+  infoCount.textContent = `${loaded.length} placed`;
+}
+
+// initial setup
+function init(){
+  makeFileSlots(parseInt(countInput.value || 4));
+  countInput.addEventListener('input', ()=> {
+    let v = parseInt(countInput.value||1);
+    if(isNaN(v) || v<1) v = 1;
+    if(v>9) v = 9;
+    countInput.value = v;
+    makeFileSlots(v);
+  });
+  themeSelect.addEventListener('change', updateInfo);
+  styleSelect.addEventListener('change', updateInfo);
+  spacingRange.addEventListener('input', updateInfo);
+
+  generateBtn.addEventListener('click', generate);
+
+  downloadBtn.addEventListener('click', ()=>{
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'photo-composition.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+
+  // draw an initial placeholder background
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  const placeholder = new Image();
+  placeholder.src = themeSVG(themeSelect.value, canvas.width, canvas.height);
+  placeholder.onload = ()=> ctx.drawImage(placeholder,0,0,canvas.width,canvas.height);
+
+  updateInfo();
+}
+
+init();
+</script>
+</body>
+</html>

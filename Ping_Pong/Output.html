@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Table Tennis — Green Playground, Beige Paddles</title>
+  <style>
+    /* Page background: stretched to window size using the provided image */
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      user-select: none;
+      /* Stretch the requested background image to the window size */
+      background-image: url("https://raw.githubusercontent.com/https-deeplearning-ai/lc-build-with-andrew-platform/main/img/tabletennis43.jpg");
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: 100% 100%; /* stretch to window size as requested */
+      background-attachment: fixed;
+      color: #e6f7f2;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    header {
+      width: 900px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 12px;
+      background: rgba(0,0,0,0.25);
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+
+    .controls-left, .controls-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    label { font-size: 14px; color: #f0f7f1; }
+    input[type="number"] {
+      width: 72px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
+      color: #fff;
+    }
+
+    .difficulty {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .difficulty input {
+      margin-right: 4px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    #game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      width: 900px;
+    }
+
+    /* Canvas: the playable table will be drawn in green inside the canvas */
+    canvas {
+      width: 900px;
+      height: 520px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.6);
+      image-rendering: optimizeSpeed;
+      border-radius: 6px;
+      display: block;
+      background: transparent; /* keep transparent so page background still visible around it */
+    }
+
+    #bottom-bar {
+      width: 900px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      gap: 12px;
+      background: rgba(0,0,0,0.25);
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+
+    .score {
+      font-size: 18px;
+      font-weight: bold;
+      color: #ffd166;
+    }
+
+    #info {
+      font-size: 13px;
+      color: #cfe8e0;
+      text-align: center;
+    }
+
+    button {
+      background: #2ec4b6;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: #012;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover { filter: brightness(0.95); }
+
+    .overlay {
+      position: absolute;
+      width: 900px;
+      height: 520px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      top: 0;
+      left: 0;
+    }
+    .overlay .box {
+      pointer-events: auto;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      padding: 18px 22px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 22px;
+    }
+
+    @media (max-width: 940px) {
+      header, #bottom-bar, #game-container {
+        width: 100%;
+      }
+      canvas {
+        width: 100%;
+        height: calc(100vw * 520 / 900); /* maintain aspect ratio */
+      }
+      .overlay { left: 0; right: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="controls-left">
+      <h1>Table Tennis</h1>
+      <div style="font-size:13px;color:#cfe8e0;margin-left:6px;">(Use Arrow Up / Arrow Down)</div>
+    </div>
+
+    <div class="controls-right" aria-label="Game settings">
+      <div>
+        <label style="font-size:13px;">Difficulty:</label>
+        <div class="difficulty">
+          <label><input type="radio" name="difficulty" value="easy" id="diffEasy"> Easy</label>
+          <label><input type="radio" name="difficulty" value="medium" id="diffMedium" checked> Medium</label>
+          <label><input type="radio" name="difficulty" value="hard" id="diffHard"> Hard</label>
+        </div>
+      </div>
+
+      <div>
+        <label for="winScore" style="font-size:13px;">Points to win:</label>
+        <input id="winScore" type="number" min="1" max="50" value="7" />
+      </div>
+
+      <div style="font-size:12px;color:#cfe8e0;">Space = pause</div>
+    </div>
+  </header>
+
+  <div id="game-container">
+    <canvas id="game" width="900" height="520"></canvas>
+
+    <div class="overlay" id="overlay" style="display:none;">
+      <div class="box" id="overlayBox"></div>
+    </div>
+
+    <div id="info" style="margin-top:6px;">
+      Controls: Arrow Up / Arrow Down to move. Press Space to pause/resume. Use Serve or Restart as needed.
+    </div>
+  </div>
+
+  <div id="bottom-bar">
+    <div class="score" id="score">Player: 0 &nbsp;&nbsp; Computer: 0</div>
+    <div style="display:flex;gap:8px;">
+      <button id="serveBtn">Serve (immediate)</button>
+      <button id="restartBtn">Restart</button>
+    </div>
+  </div>
+
+  <script>
+  // Pong with green playground, beige paddles and white ball.
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // Paddles
+  const PADDLE_WIDTH = 12;
+  const PADDLE_HEIGHT = 110;
+  const PADDLE_MARGIN = 20;
+
+  const player = {
+    x: PADDLE_MARGIN,
+    y: (H - PADDLE_HEIGHT) / 2,
+    w: PADDLE_WIDTH,
+    h: PADDLE_HEIGHT,
+    speed: 7,
+  };
+
+  const computer = {
+    x: W - PADDLE_MARGIN - PADDLE_WIDTH,
+    y: (H - PADDLE_HEIGHT) / 2,
+    w: PADDLE_WIDTH,
+    h: PADDLE_HEIGHT,
+    speed: 5,
+  };
+
+  const ball = {
+    x: W / 2,
+    y: H / 2,
+    r: 9,
+    speed: 5,
+    vx: 0, vy: 0,
+    stuck: true
+  };
+
+  // Colors requested
+  const TABLE_GREEN = '#0f7a34';   // playground green
+  const PADDLE_BEIGE = '#f5f5dc';  // beige paddles
+  const BALL_WHITE = '#ffffff';    // ball white
+
+  // Score and game state
+  let scorePlayer = 0;
+  let scoreComputer = 0;
+  let paused = false;
+  let gameOver = false;
+
+  let winTarget = parseInt(document.getElementById('winScore').value, 10) || 7;
+
+  const keys = { ArrowUp: false, ArrowDown: false };
+
+  const difficulties = {
+    easy:    { aiSpeed: 3.2, ballSpeed: 4.2, aiFactorOnSide: 0.8 },
+    medium:  { aiSpeed: 5,   ballSpeed: 5.0, aiFactorOnSide: 1.0 },
+    hard:    { aiSpeed: 7.2, ballSpeed: 5.6, aiFactorOnSide: 1.2 },
+  };
+
+  function applyDifficulty(name) {
+    const d = difficulties[name] || difficulties.medium;
+    computer.speed = d.aiSpeed;
+    ball.baseSpeed = d.ballSpeed;
+    computer.aiFactorOnSide = d.aiFactorOnSide;
+  }
+
+  function getSelectedDifficulty() {
+    const form = document.getElementsByName('difficulty');
+    for (const r of form) {
+      if (r.checked) return r.value;
+    }
+    return 'medium';
+  }
+
+  function resetBall(toRight = true) {
+    if (gameOver) return;
+    ball.x = W / 2;
+    ball.y = H / 2;
+    ball.speed = ball.baseSpeed || 5;
+    ball.stuck = false;
+    const angle = (Math.random() * 2 - 1) * (Math.PI / 6); // -30..30 deg
+    ball.vx = (toRight ? 1 : -1) * ball.speed * Math.cos(angle);
+    ball.vy = ball.speed * Math.sin(angle);
+  }
+
+  function serveImmediate() {
+    if (gameOver) return;
+    const toRight = Math.random() > 0.35;
+    resetBall(toRight);
+  }
+
+  function setWinTargetFromInput() {
+    const v = parseInt(document.getElementById('winScore').value, 10);
+    if (!isNaN(v) && v >= 1) {
+      winTarget = v;
+    } else {
+      winTarget = 7;
+      document.getElementById('winScore').value = 7;
+    }
+  }
+
+  function showOverlay(text) {
+    const overlay = document.getElementById('overlay');
+    const box = document.getElementById('overlayBox');
+    box.textContent = text;
+    overlay.style.display = 'flex';
+  }
+
+  function hideOverlay() {
+    const overlay = document.getElementById('overlay');
+    overlay.style.display = 'none';
+  }
+
+  function updateScoreText() {
+    document.getElementById('score').textContent = `Player: ${scorePlayer}   Computer: ${scoreComputer}`;
+  }
+
+  function restartGame() {
+    scorePlayer = 0;
+    scoreComputer = 0;
+    updateScoreText();
+    player.y = (H - PADDLE_HEIGHT) / 2;
+    computer.y = (H - PADDLE_HEIGHT) / 2;
+    ball.stuck = true;
+    ball.x = W / 2;
+    ball.y = H / 2;
+    gameOver = false;
+    paused = false;
+    hideOverlay();
+    applyDifficulty(getSelectedDifficulty());
+    setWinTargetFromInput();
+    setTimeout(() => resetBall(Math.random() > 0.5), 700);
+  }
+
+  // Input handling
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+      keys[e.code] = true;
+      e.preventDefault();
+    } else if (e.code === 'Space') {
+      paused = !paused;
+      e.preventDefault();
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+      keys[e.code] = false;
+      e.preventDefault();
+    }
+  });
+
+  document.getElementById('restartBtn').addEventListener('click', () => {
+    applyDifficulty(getSelectedDifficulty());
+    setWinTargetFromInput();
+    restartGame();
+  });
+
+  document.getElementById('serveBtn').addEventListener('click', () => {
+    setWinTargetFromInput();
+    if (!gameOver) serveImmediate();
+  });
+
+  const radios = document.getElementsByName('difficulty');
+  for (const r of radios) {
+    r.addEventListener('change', () => {
+      applyDifficulty(getSelectedDifficulty());
+    });
+  }
+
+  document.getElementById('winScore').addEventListener('change', () => {
+    setWinTargetFromInput();
+  });
+
+  function rectCircleColliding(px, py, pw, ph, cx, cy, cr) {
+    const closestX = Math.max(px, Math.min(cx, px + pw));
+    const closestY = Math.max(py, Math.min(cy, py + ph));
+    const dx = cx - closestX;
+    const dy = cy - closestY;
+    return (dx * dx + dy * dy) <= cr * cr;
+  }
+
+  function update() {
+    if (paused || gameOver) return;
+
+    // Player
+    if (keys.ArrowUp && !keys.ArrowDown) player.y -= player.speed;
+    else if (keys.ArrowDown && !keys.ArrowUp) player.y += player.speed;
+    if (player.y < 0) player.y = 0;
+    if (player.y + player.h > H) player.y = H - player.h;
+
+    // Computer AI
+    const paddleCenter = computer.y + computer.h / 2;
+    const diff = ball.y - paddleCenter;
+    const onAISide = ball.x > W / 2;
+    const aiFactor = onAISide ? (computer.aiFactorOnSide || 1.0) : 0.65;
+    const maxMove = computer.speed * aiFactor;
+    if (Math.abs(diff) > 6) {
+      computer.y += Math.sign(diff) * Math.min(maxMove, Math.abs(diff));
+    }
+    if (computer.y < 0) computer.y = 0;
+    if (computer.y + computer.h > H) computer.y = H - computer.h;
+
+    // Ball
+    if (!ball.stuck) {
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      if (ball.y - ball.r < 0) {
+        ball.y = ball.r;
+        ball.vy = -ball.vy;
+      } else if (ball.y + ball.r > H) {
+        ball.y = H - ball.r;
+        ball.vy = -ball.vy;
+      }
+
+      if (rectCircleColliding(player.x, player.y, player.w, player.h, ball.x, ball.y, ball.r)) {
+        ball.x = player.x + player.w + ball.r;
+        const rel = (ball.y - (player.y + player.h / 2)) / (player.h / 2);
+        const maxBounce = Math.PI / 3;
+        const angle = rel * maxBounce;
+        const dir = 1;
+        ball.speed *= 1.03;
+        ball.vx = dir * ball.speed * Math.cos(angle);
+        ball.vy = ball.speed * Math.sin(angle);
+      }
+
+      if (rectCircleColliding(computer.x, computer.y, computer.w, computer.h, ball.x, ball.y, ball.r)) {
+        ball.x = computer.x - ball.r;
+        const rel = (ball.y - (computer.y + computer.h / 2)) / (computer.h / 2);
+        const maxBounce = Math.PI / 3;
+        const angle = rel * maxBounce;
+        const dir = -1;
+        ball.speed *= 1.03;
+        ball.vx = dir * ball.speed * Math.cos(angle);
+        ball.vy = ball.speed * Math.sin(angle);
+      }
+
+      if (ball.x - ball.r < 0) {
+        scoreComputer += 1;
+        updateScoreText();
+        ball.stuck = true;
+        ball.x = W / 2; ball.y = H / 2;
+        if (scoreComputer >= winTarget) {
+          onGameOver('Computer wins!');
+        } else {
+          setTimeout(() => resetBall(true), 500);
+        }
+      } else if (ball.x + ball.r > W) {
+        scorePlayer += 1;
+        updateScoreText();
+        ball.stuck = true;
+        ball.x = W / 2; ball.y = H / 2;
+        if (scorePlayer >= winTarget) {
+          onGameOver('You win! 🎉');
+        } else {
+          setTimeout(() => resetBall(false), 500);
+        }
+      }
+
+      const maxSpeed = 16;
+      const currentSpeed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+      if (currentSpeed > maxSpeed) {
+        ball.vx = (ball.vx / currentSpeed) * maxSpeed;
+        ball.vy = (ball.vy / currentSpeed) * maxSpeed;
+      }
+    } else {
+      // keep ball centered vertically near player while waiting for serve
+      ball.x = W / 2;
+      ball.y = Math.max(player.y + player.h / 2, Math.min(H - ball.r, Math.max(ball.r, ball.y)));
+    }
+  }
+
+  function onGameOver(text) {
+    gameOver = true;
+    ball.stuck = true;
+    showOverlay(text + ' Click Restart to play again.');
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Draw the playground (table) in green as requested.
+    ctx.fillStyle = TABLE_GREEN;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle darker borders to simulate table edges
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(2, 2, W - 4, H - 4);
+
+    // Middle dashed line (table center)
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 14]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Paddles: beige as requested
+    ctx.fillStyle = PADDLE_BEIGE;
+    roundRect(ctx, player.x, player.y, player.w, player.h, 6, true, false);
+    roundRect(ctx, computer.x, computer.y, computer.w, computer.h, 6, true, false);
+
+    // Ball: white
+    ctx.fillStyle = BALL_WHITE;
+    circle(ctx, ball.x, ball.y, ball.r);
+
+    // HUD text
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = '12px Arial';
+    ctx.fillText('Left: you (Arrow Up/Down)', 16, 18);
+    ctx.fillText('Right: computer', W - 150, 18);
+
+    // Pause overlay (if paused and not game over)
+    if (paused && !gameOver) {
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff';
+      ctx.font = '28px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('PAUSED', W / 2, H / 2);
+      ctx.textAlign = 'start';
+    }
+  }
+
+  // Utility shapes
+  function circle(ctx, x, y, r) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Start
+  applyDifficulty(getSelectedDifficulty());
+  setWinTargetFromInput();
+  restartGame();
+  requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
